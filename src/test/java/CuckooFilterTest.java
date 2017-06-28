@@ -11,13 +11,17 @@ public class CuckooFilterTest {
 	public void insertTest() {
 
 		int entries = 2;
-		int capacity = 51494895;
+		int capacity = 50000000;
 		int maxEntries = 3;
+		int fpBits = 7;
 
 		try {
-			CuckooFilter cuckooFilter = new CuckooFilter( entries, capacity, true, maxEntries );
+			CuckooFilter cuckooFilter = new CuckooFilter( entries, capacity, true, maxEntries, fpBits );
 
-			int runs = 102989790;
+			int runs = 100000000;
+
+			System.out.println( cuckooFilter.getMemoryUsageBytes() );
+			System.out.println( cuckooFilter.getCapacity() );
 
 
 			long currentMillis1 = System.currentTimeMillis();

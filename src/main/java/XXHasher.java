@@ -19,12 +19,16 @@ public class XXHasher {
 		return factory.hash64().hash( data, 0, data.length, seed );
 	}
 
-	public static long getHash( final byte data ) {
+	public static long getHash( final int data ) {
 
-		final byte[] buf = new byte[1];
-		buf[0] = data;
+		// Transform int to BE byte array
+		final byte[] buf = new byte[] {
+				(byte)(data >>> 24),
+				(byte)(data >>> 16),
+				(byte)(data >>> 8),
+				(byte)data};
 
-		return factory.hash64().hash( buf, 0, 1, seed );
+		return factory.hash64().hash( buf, 0, 4, seed );
 	}
 
 }
