@@ -5,7 +5,10 @@ import java.lang.reflect.Field;
 /**
  * Created by rjones on 6/22/17.
  */
-public class UnsafeBuckets {
+public class ConfigurableUnsafeBuckets {
+
+	private static final int BITS_PER_INT = 32;
+	private static final int BITS_PER_BYTE = 8;
 
 	private final long maxCapacity = 0x4000000000000000L;
 	private final int maxEntries;
@@ -14,11 +17,18 @@ public class UnsafeBuckets {
 	private long[] addresses;
 
 	private final long capacity;
+	private final long capacityInts;
+	private final long capacityBytes;
 	private int entries;
 
 	private final int shiftRightBits;
 
-	public UnsafeBuckets(int entries, long capacity, int maxEntries) throws NoSuchFieldException, IllegalAccessException {
+	private final int getClearMask;
+	private final int putClearMask;
+
+	private int fpBits;
+
+	public ConfigurableUnsafeBuckets(int entries, long capacity, int maxEntries, int fpBits) throws NoSuchFieldException, IllegalAccessException {
 
 		Field singleoneInstanceField = Unsafe.class.getDeclaredField("theUnsafe");
 		singleoneInstanceField.setAccessible(true);
@@ -34,19 +44,28 @@ public class UnsafeBuckets {
 
 		shiftRightBits = 64 - Long.bitCount(realCapacity - 1);
 
+		long capacityInts = (long) Math.ceil((double) realCapacity * (double) fpBits / (double) BITS_PER_INT);
+		long capacityBytes = capacityInts * BITS_PER_BYTE;
+
 		addresses = new long[entries];
 		for(int i = 0; i < entries; i++) {
-			addresses[i] = unsafe.allocateMemory( realCapacity );
-			unsafe.setMemory( addresses[i], realCapacity, (byte) 0 );
+			addresses[i] = unsafe.allocateMemory( capacityBytes);
+			unsafe.setMemory( addresses[i], capacityBytes, (byte) 0 );
 		}
+
+		getClearMask = -1 >>> (BITS_PER_INT - fpBits) << (BITS_PER_INT - fpBits);
+		putClearMask = ~getClearMask;
 
 		this.entries = entries;
 		this.capacity = realCapacity;
 		this.maxEntries = maxEntries;
+		this.capacityInts = capacityInts;
+		this.capacityBytes = capacityBytes;
+		this.fpBits = fpBits;
 	}
 
 	public long getMemoryUsageBytes() {
-		return capacity * entries;
+		return capacityBytes * entries;
 	}
 
 	public long getBucket(long hash) {
@@ -61,7 +80,7 @@ public class UnsafeBuckets {
 
 	private boolean isValueSet(int entry, long bucket) {
 
-		return unsafe.getByte( getCheckAddress( entry, bucket ) ) != 0;
+		return getValue( entry, bucket ) != 0;
 	}
 
 	public boolean expand() {
@@ -75,8 +94,8 @@ public class UnsafeBuckets {
 		for(int i = 0; i < entries - 1; i++) {
 			newAddresses[i] = addresses[i];
 		}
-		newAddresses[entries - 1] = unsafe.allocateMemory( capacity );
-		unsafe.setMemory( newAddresses[entries - 1], capacity, (byte) 0 );
+		newAddresses[entries - 1] = unsafe.allocateMemory(capacityBytes);
+		unsafe.setMemory( newAddresses[entries - 1], capacityBytes, (byte) 0 );
 		/*for(int i = entries / 2; i < entries; i++) {
 			newAddresses[i] = unsafe.allocateMemory( capacity );
 			unsafe.setMemory( newAddresses[i], capacity, (byte) 0 );
@@ -89,13 +108,13 @@ public class UnsafeBuckets {
 		return true;
 	}
 
-	public boolean contains(long bucket, byte value) {
+	public boolean contains(long bucket, int value) {
 
 		QuickLogger.log( "Contains Bucket: " + bucket );
 
 		for(int entry = 0; entry < entries; entry++) {
 
-			if(unsafe.getByte( getCheckAddress( entry, bucket ) ) == value) {
+			if(getValue( entry, bucket ) == value) {
 				return true;
 			}
 		}
@@ -108,9 +127,9 @@ public class UnsafeBuckets {
 
 		for(int entry = 0; entry < entries; entry++) {
 
-			byte currentValue = unsafe.getByte( getCheckAddress( entry, bucket ) );
+			int currentValue = getValue( entry, bucket );
 			if( currentValue == 0 ) {
-				putByte( entry, bucket, value );
+				putValue( entry, bucket, value );
 				QuickLogger.log( "Empty slot found: " + bucket );
 				return true;
 			}
@@ -123,23 +142,43 @@ public class UnsafeBuckets {
 		return false;
 	}
 
-	public byte swap(int entry, long bucket, byte value) {
+	public int swap(int entry, long bucket, byte value) {
 
 		QuickLogger.log( "Swap Bucket: " + bucket );
 
-		byte retVal = getByte( entry, bucket );
-		putByte( entry, bucket, value );
+		int retVal = getValue( entry, bucket );
+		putValue( entry, bucket, value );
 		return retVal;
 	}
 
-	private byte getByte(int entry, long bucket) {
+	private int getValue(int entry, long bucket) {
 
-		return unsafe.getByte( getCheckAddress( entry, bucket ) );
+		long bucketBits = bucket * fpBits;
+
+		long bucketInt = bucketBits / BITS_PER_INT;
+		long startBit = bucketBits % BITS_PER_INT;
+
+		int targetInt1 = unsafe.getInt(bucketInt);
+
+		int clearMask = getClearMask >>> startBit;
+
+		return targetInt1 & clearMask;
 	}
 
-	private void putByte(int entry, long bucket, byte value) {
+	private void putValue(int entry, long bucket, int value) {
 
-		unsafe.putByte( getCheckAddress( entry, bucket ), value );
+		long bucketBits = bucket * fpBits;
+
+		long bucketInt = bucketBits / BITS_PER_INT;
+		long startBit = bucketBits % BITS_PER_INT;
+
+		int targetInt1 = unsafe.getInt(bucketInt);
+
+		int clearMask = putClearMask >>> startBit;
+
+		targetInt1 = (targetInt1 & clearMask) | value;
+
+		unsafe.putInt( bucketInt, targetInt1 );
 	}
 
 	public int getEntries() {

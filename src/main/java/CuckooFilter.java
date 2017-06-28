@@ -1,9 +1,5 @@
-import com.sun.xml.internal.bind.v2.model.annotation.Quick;
-
 import java.nio.charset.StandardCharsets;
-import java.util.Random;
 import java.util.SplittableRandom;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by rjones on 6/22/17.
@@ -16,7 +12,7 @@ public class CuckooFilter {
 
 	private static int seed = 0x48f7e28a;
 
-	private final UnsafeBuckets buckets;
+	private final ByteUnsafeBuckets buckets;
 
 	private final SplittableRandom random;
 
@@ -30,7 +26,7 @@ public class CuckooFilter {
 
 	public CuckooFilter( int entries, long capacity, boolean allowExpand, int maxEntries ) throws NoSuchFieldException, IllegalAccessException {
 
-		buckets = new UnsafeBuckets( entries, capacity, maxEntries );
+		buckets = new ByteUnsafeBuckets( entries, capacity, maxEntries );
 		random = new SplittableRandom( seed );
 		this.allowExpand = allowExpand;
 	}
