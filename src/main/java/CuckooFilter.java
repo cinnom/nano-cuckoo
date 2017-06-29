@@ -3,9 +3,13 @@ import buckets.internal.ByteUnsafeBuckets;
 import buckets.internal.ConfigurableUnsafeBuckets;
 import buckets.internal.IntUnsafeBuckets;
 import buckets.internal.ShortUnsafeBuckets;
+import hash.BucketHasher;
+import hash.DumbHasher;
+import hash.FingerprintHasher;
+import hash.XXHasher;
+import random.Randomizer;
 
 import java.nio.charset.StandardCharsets;
-import java.util.SplittableRandom;
 
 /**
  * Created by rjones on 6/22/17.
@@ -20,11 +24,14 @@ public class CuckooFilter {
 	private static int seed = 0x48f7e28a;
 
 	private final Buckets buckets;
+	private final BucketHasher bucketHasher;
+	private final FingerprintHasher fpHasher;
 
-	private final SplittableRandom random;
+	private final Randomizer random;
 
 	private boolean allowExpand;
 
+	private long lastContainsHash;
 	private int bootedFingerprint;
 	private long bootedBucket1;
 	private long bootedBucket2;
@@ -33,27 +40,30 @@ public class CuckooFilter {
 
 	private final int fpBits;
 	private final int fpPerLong;
-
 	private final int fpMask;
 
-	public CuckooFilter( int entries, long capacity, boolean allowExpand, int maxEntries, int fpBits ) throws NoSuchFieldException, IllegalAccessException {
+	public CuckooFilter( int entryBits, long capacity, boolean allowExpand, int maxEntries, int fpBits ) throws NoSuchFieldException, IllegalAccessException {
 
 		switch (fpBits) {
 			case 8:
-				buckets = new ByteUnsafeBuckets( entries, capacity, maxEntries );
+				buckets = new ByteUnsafeBuckets( entryBits, capacity, maxEntries );
 				break;
 			case 16:
-				buckets = new ShortUnsafeBuckets( entries, capacity, maxEntries );
+				buckets = new ShortUnsafeBuckets( entryBits, capacity, maxEntries );
 				break;
 			case 32:
-				buckets = new IntUnsafeBuckets( entries, capacity, maxEntries );
+				buckets = new IntUnsafeBuckets( entryBits, capacity, maxEntries );
 				break;
 			default:
-				buckets = new ConfigurableUnsafeBuckets( entries, capacity, maxEntries, fpBits );
+				buckets = new ConfigurableUnsafeBuckets( entryBits, capacity, maxEntries, fpBits );
 				break;
 		}
 
-		random = new SplittableRandom( seed );
+		XXHasher xxHasher = new XXHasher( seed );
+		DumbHasher dumbHasher = new DumbHasher( fpBits, seed );
+
+		bucketHasher = xxHasher;
+		random = dumbHasher;
 
 		this.allowExpand = allowExpand;
 		this.fpBits = fpBits;
@@ -62,6 +72,13 @@ public class CuckooFilter {
 
 		int shift = BITS_PER_INT - fpBits;
 		fpMask = -1 >>> shift;
+
+		if(fpBits <= 16) {
+			fpHasher = dumbHasher;
+		}
+		else {
+			fpHasher = xxHasher;
+		}
 	}
 
 	public boolean insert( String value ) {
@@ -77,7 +94,7 @@ public class CuckooFilter {
 			return false;
 		}
 
-		long hash = XXHasher.getHash( data );
+		long hash = bucketHasher.getHash( data );
 
 		long bucket1 = buckets.getBucket( hash );
 
@@ -108,7 +125,7 @@ public class CuckooFilter {
 			return true;
 		}
 
-		long fingerprintHash = XXHasher.getHash( fingerprint );
+		long fingerprintHash = fpHasher.getHash( fingerprint );
 
 		//System.out.println(fingerprintHash);
 
@@ -123,9 +140,9 @@ public class CuckooFilter {
 
 		for ( int n = 0; n < MAX_NUM_KICKS; n++ ) {
 
-			int entrySwap = Math.abs( random.nextInt( buckets.getEntries() ) );
+			int entrySwap = random.nextInt() & buckets.getEntryMask();
 			fingerprint = buckets.swap( entrySwap, bucket, fingerprint );
-			bucket = bucket ^ buckets.getBucket( XXHasher.getHash( fingerprint ) );
+			bucket = bucket ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
 			if ( buckets.insert( bucket, fingerprint, true ) ) {
 				return true;
 			}
@@ -137,14 +154,20 @@ public class CuckooFilter {
 
 		bootedFingerprint = fingerprint;
 		bootedBucket1 = bucket;
-		bootedBucket2 = bucket ^ buckets.getBucket( XXHasher.getHash( fingerprint ) );
+		bootedBucket2 = bucket ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
 
 		return false;
 	}
 
 	public boolean contains( byte[] data ) {
 
-		long hash = XXHasher.getHash( data );
+		long hash = bucketHasher.getHash( data );
+
+		// "dumbass cache"
+		if( lastContainsHash == hash) {
+			return true;
+		}
+		lastContainsHash = hash;
 
 		long bucket1 = buckets.getBucket( hash );
 
@@ -154,7 +177,7 @@ public class CuckooFilter {
 			return true;
 		}
 
-		long fingerprintHash = XXHasher.getHash( fingerprint );
+		long fingerprintHash = fpHasher.getHash( fingerprint );
 
 		long bucket2 = bucket1 ^ buckets.getBucket( fingerprintHash );
 

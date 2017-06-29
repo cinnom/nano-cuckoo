@@ -4,6 +4,7 @@ import buckets.Buckets;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 
 /**
  * Created by rjones on 6/28/17.
@@ -19,15 +20,16 @@ public abstract class UnsafeBuckets implements Buckets {
 	private final long capacity;
 	private final long capacityBytes;
 	private int entries;
+	private int entryMask;
 
-	private final int shiftRightBits;
+	private final int bucketBits;
 
 	protected final Unsafe unsafe;
 	protected long[] addresses;
 
 	protected int fpBits;
 
-	public UnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits )
+	public UnsafeBuckets( int entryBits, long capacity, int maxEntries, int fpBits )
 			throws NoSuchFieldException, IllegalAccessException {
 
 		Field singleoneInstanceField = Unsafe.class.getDeclaredField( "theUnsafe" );
@@ -40,13 +42,17 @@ public abstract class UnsafeBuckets implements Buckets {
 			realCapacity <<= 1;
 		}
 
-		shiftRightBits = 64 - Long.bitCount( realCapacity - 1 );
+		entries = (int) Math.pow(2, entryBits);
+		entryMask = entries - 1;
+
+		bucketBits = 64 - Long.bitCount( realCapacity - 1 );
 
 		long capacityBytes = (realCapacity >>> DIV_8) * fpBits;
 
 		if((realCapacity & MOD_8_MASK) > 0) {
 			capacityBytes++;
 		}
+		Arrays.hashCode( new int[]{} );
 
 		addresses = new long[entries];
 		for ( int i = 0; i < entries; i++ ) {
@@ -61,6 +67,11 @@ public abstract class UnsafeBuckets implements Buckets {
 		this.fpBits = fpBits;
 	}
 
+	public int getEntryMask() {
+
+		return entryMask;
+	}
+
 	public long getMemoryUsageBytes() {
 
 		return capacityBytes * entries;
@@ -68,7 +79,7 @@ public abstract class UnsafeBuckets implements Buckets {
 
 	public long getBucket( long hash ) {
 
-		return hash >>> shiftRightBits;
+		return hash >>> bucketBits;
 	}
 
 	public boolean expand() {
@@ -77,13 +88,20 @@ public abstract class UnsafeBuckets implements Buckets {
 			return false;
 		}
 
-		long[] newAddresses = new long[++entries];
+		entries *= 2;
+		entryMask = entries - 1;
 
-		for ( int i = 0; i < entries - 1; i++ ) {
+		long[] newAddresses = new long[entries];
+
+		for ( int i = 0; i < entries / 2; i++ ) {
 			newAddresses[i] = addresses[i];
 		}
-		newAddresses[entries - 1] = unsafe.allocateMemory( capacityBytes );
-		unsafe.setMemory( newAddresses[entries - 1], capacityBytes, (byte) 0 );
+		for ( int i = entries / 2; i < entries; i++ ) {
+			newAddresses[i] = unsafe.allocateMemory( capacityBytes );
+			unsafe.setMemory( newAddresses[i], capacityBytes, (byte) 0 );
+		}
+		// newAddresses[entries - 1] = unsafe.allocateMemory( capacityBytes );
+		// unsafe.setMemory( newAddresses[entries - 1], capacityBytes, (byte) 0 );
 
 		addresses = newAddresses;
 

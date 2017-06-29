@@ -10,15 +10,16 @@ public class CuckooFilterTest {
 	@Test
 	public void insertTest() {
 
-		int entries = 2;
+		int entryBits = 1;
 		int capacity = 50000000;
-		int maxEntries = 3;
-		int fpBits = 7;
+		int maxEntries = 4;
+		int fpBits = 8;
 
 		try {
-			CuckooFilter cuckooFilter = new CuckooFilter( entries, capacity, true, maxEntries, fpBits );
+			CuckooFilter cuckooFilter = new CuckooFilter( entryBits, capacity, false, maxEntries, fpBits );
 
 			int runs = 100000000;
+			int actualRuns = 0;
 
 			System.out.println( cuckooFilter.getMemoryUsageBytes() );
 			System.out.println( cuckooFilter.getCapacity() );
@@ -29,6 +30,7 @@ public class CuckooFilterTest {
 
 				String s = i + "abcdefghijklmn-opqrstuvwxyz-000000";
 				byte[] bytes = s.getBytes( "UTF-8" );
+				actualRuns++;
 
 				if( !cuckooFilter.insert( bytes ) ) {
 					System.out.println( "Insert failed at: " + i );

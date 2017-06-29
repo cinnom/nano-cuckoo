@@ -22,4 +22,6 @@ public interface Buckets {
 	long getCapacity();
 
 	void delete();
+
+	int getEntryMask();
 }
