@@ -14,10 +14,10 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 	private final int initClearMask;
 
 
-	public ConfigurableUnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits, boolean allowUpsize )
+	public ConfigurableUnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits )
 			throws NoSuchFieldException, IllegalAccessException {
 
-		super( entries, capacity, maxEntries, fpBits, allowUpsize );
+		super( entries, capacity, maxEntries, fpBits );
 
 		int shift = BITS_PER_INT - fpBits;
 		initClearMask = (-1 >>> shift) << shift;

@@ -12,14 +12,14 @@ public class NanoCuckooFilterTest {
 	public void insertTest() {
 
 		int entryBits = 2;
-		int capacity = 10;
+		int capacity = 25000000;
 		int maxEntries = 4;
-		int fpBits = 8;
+		int fpBits = 16;
 
 		try {
-			NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( entryBits, capacity, false, maxEntries, fpBits, false );
+			NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( entryBits, capacity, false, maxEntries, fpBits );
 
-			int runs = 40;
+			int runs = 2 * capacity * (int) Math.pow(2, entryBits);
 			int actualRuns = 0;
 
 			System.out.println( cuckooFilter.getMemoryUsageBytes() );
@@ -39,11 +39,11 @@ public class NanoCuckooFilterTest {
 				}
 			}
 			long currentMillis2 = System.currentTimeMillis();
-			//System.out.println("Insert ops/sec: " + (runs / ((currentMillis2 - currentMillis1) / 1000)) );
+			System.out.println("Insert ops/sec: " + (actualRuns / ((currentMillis2 - currentMillis1) / 1000)) );
 
 			System.out.println(cuckooFilter.getDuplicates());
 
-			for(int i = 0; i < runs; i++) {
+			for(int i = 0; i < actualRuns+1; i++) {
 
 				String s = i + "abcdefghijklmn-opqrstuvwxyz-000000";
 				byte[] bytes = s.getBytes( "UTF-8" );
@@ -55,11 +55,11 @@ public class NanoCuckooFilterTest {
 			}
 
 			long currentMillis3 = System.currentTimeMillis();
-			System.out.println("Contains (true) ops/sec: " + (runs / ((currentMillis3 - currentMillis2) / 1000)) );
+			System.out.println("Contains (true) ops/sec: " + (actualRuns / ((currentMillis3 - currentMillis2) / 1000)) );
 
 			long falsePos = 0;
 
-			for(int i = 0; i < runs; i++) {
+			for(int i = 0; i < actualRuns; i++) {
 
 				String s = i + "1abcdefghijklm1";
 				byte[] bytes = s.getBytes( "UTF-8" );
@@ -70,9 +70,9 @@ public class NanoCuckooFilterTest {
 			}
 
 			long currentMillis4 = System.currentTimeMillis();
-			System.out.println("Contains (false) ops/sec: " + (runs / ((currentMillis4 - currentMillis3) / 1000)) );
+			System.out.println("Contains (false) ops/sec: " + (actualRuns / ((currentMillis4 - currentMillis3) / 1000)) );
 
-			System.out.println("FPP: " + (double)falsePos / (double)runs);
+			System.out.println("FPP: " + (double)falsePos / (double)actualRuns);
 
 		} catch ( NoSuchFieldException e ) {
 			e.printStackTrace();

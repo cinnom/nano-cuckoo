@@ -31,39 +31,25 @@ public abstract class UnsafeBuckets implements Buckets {
 
 	public int duplicates = 0;
 
-	public UnsafeBuckets( int entryBits, long capacity, int maxEntries, int fpBits, boolean allowUpsize )
+	public UnsafeBuckets( int entryBits, long capacity, int maxEntries, int fpBits )
 			throws NoSuchFieldException, IllegalAccessException {
 
 		Field singleoneInstanceField = Unsafe.class.getDeclaredField( "theUnsafe" );
 		singleoneInstanceField.setAccessible( true );
 		unsafe = (Unsafe) singleoneInstanceField.get( null );
 
-		long realCapacity;
+		long realCapacity = Math.min( Long.highestOneBit( capacity ), maxCapacity );
 
-		if(allowUpsize) {
-
-			realCapacity = Math.min( Long.highestOneBit( capacity ), maxCapacity );
-
-			if ( realCapacity != capacity && realCapacity < maxCapacity ) {
-				realCapacity <<= 1;
-			}
-		}
-		else {
-			realCapacity = Math.min( capacity, maxCapacity );
+		if ( realCapacity != capacity && realCapacity < maxCapacity ) {
+			realCapacity <<= 1;
 		}
 
-		if(Long.bitCount( realCapacity ) == 1) {
-			bucketBits = 64 - Long.bitCount( realCapacity - 1 );
-		}
-		else {
-			bucketBits = 0;
-		}
+		bucketBits = 64 - Long.bitCount( realCapacity - 1 );
 
 		entries = (int) Math.pow(2, entryBits);
 		entryMask = entries - 1;
 
 		long capacityBytes = (realCapacity >>> DIV_8) * fpBits + 4;
-
 
 		addresses = new long[entries];
 		for ( int i = 0; i < entries; i++ ) {
@@ -89,7 +75,7 @@ public abstract class UnsafeBuckets implements Buckets {
 
 	public long getBucket( long hash ) {
 
-		return bucketBits > 0 ? hash >>> bucketBits : Math.abs(hash % capacity);
+		return hash >>> bucketBits;
 	}
 
 	public int getDuplicates() {

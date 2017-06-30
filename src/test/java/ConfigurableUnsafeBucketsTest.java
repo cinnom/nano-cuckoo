@@ -14,7 +14,7 @@ public class ConfigurableUnsafeBucketsTest {
 		int maxEntries = 3;
 		int fpBits = 7;
 
-		ConfigurableUnsafeBuckets unsafeBuckets = new ConfigurableUnsafeBuckets( entries, capacity, maxEntries, fpBits, false );
+		ConfigurableUnsafeBuckets unsafeBuckets = new ConfigurableUnsafeBuckets( entries, capacity, maxEntries, fpBits );
 
 		//unsafeBuckets.insert( 0, 101, true );
 

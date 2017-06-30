@@ -7,9 +7,9 @@ public class ByteUnsafeBuckets extends UnsafeBuckets {
 
 	private static final int FP_BITS = 8;
 
-	public ByteUnsafeBuckets(int entries, long capacity, int maxEntries, boolean allowUpsize ) throws NoSuchFieldException, IllegalAccessException {
+	public ByteUnsafeBuckets(int entries, long capacity, int maxEntries ) throws NoSuchFieldException, IllegalAccessException {
 
-		super (entries, capacity, maxEntries, FP_BITS, allowUpsize );
+		super (entries, capacity, maxEntries, FP_BITS );
 	}
 
 	protected int getValue(int entry, long bucket) {
