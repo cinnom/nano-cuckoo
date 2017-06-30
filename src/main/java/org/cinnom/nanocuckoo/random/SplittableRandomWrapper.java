@@ -1,4 +1,4 @@
-package random;
+package org.cinnom.nanocuckoo.random;
 
 import java.util.SplittableRandom;
 

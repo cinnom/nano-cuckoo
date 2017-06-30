@@ -1,6 +1,6 @@
-package buckets.internal;
+package org.cinnom.nanocuckoo.buckets.internal;
 
-import buckets.Buckets;
+import org.cinnom.nanocuckoo.buckets.Buckets;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
@@ -29,30 +29,41 @@ public abstract class UnsafeBuckets implements Buckets {
 
 	protected int fpBits;
 
-	public UnsafeBuckets( int entryBits, long capacity, int maxEntries, int fpBits )
+	public int duplicates = 0;
+
+	public UnsafeBuckets( int entryBits, long capacity, int maxEntries, int fpBits, boolean allowUpsize )
 			throws NoSuchFieldException, IllegalAccessException {
 
 		Field singleoneInstanceField = Unsafe.class.getDeclaredField( "theUnsafe" );
 		singleoneInstanceField.setAccessible( true );
 		unsafe = (Unsafe) singleoneInstanceField.get( null );
 
-		long realCapacity = Math.min(Long.highestOneBit( capacity ), maxCapacity);
+		long realCapacity;
 
-		if ( realCapacity != capacity && realCapacity < maxCapacity ) {
-			realCapacity <<= 1;
+		if(allowUpsize) {
+
+			realCapacity = Math.min( Long.highestOneBit( capacity ), maxCapacity );
+
+			if ( realCapacity != capacity && realCapacity < maxCapacity ) {
+				realCapacity <<= 1;
+			}
+		}
+		else {
+			realCapacity = Math.min( capacity, maxCapacity );
+		}
+
+		if(Long.bitCount( realCapacity ) == 1) {
+			bucketBits = 64 - Long.bitCount( realCapacity - 1 );
+		}
+		else {
+			bucketBits = 0;
 		}
 
 		entries = (int) Math.pow(2, entryBits);
 		entryMask = entries - 1;
 
-		bucketBits = 64 - Long.bitCount( realCapacity - 1 );
+		long capacityBytes = (realCapacity >>> DIV_8) * fpBits + 4;
 
-		long capacityBytes = (realCapacity >>> DIV_8) * fpBits;
-
-		if((realCapacity & MOD_8_MASK) > 0) {
-			capacityBytes++;
-		}
-		Arrays.hashCode( new int[]{} );
 
 		addresses = new long[entries];
 		for ( int i = 0; i < entries; i++ ) {
@@ -60,7 +71,6 @@ public abstract class UnsafeBuckets implements Buckets {
 			unsafe.setMemory( addresses[i], capacityBytes, (byte) 0 );
 		}
 
-		this.entries = entries;
 		this.capacity = realCapacity;
 		this.maxEntries = maxEntries;
 		this.capacityBytes = capacityBytes;
@@ -79,7 +89,11 @@ public abstract class UnsafeBuckets implements Buckets {
 
 	public long getBucket( long hash ) {
 
-		return hash >>> bucketBits;
+		return bucketBits > 0 ? hash >>> bucketBits : Math.abs(hash % capacity);
+	}
+
+	public int getDuplicates() {
+		return duplicates;
 	}
 
 	public boolean expand() {
@@ -128,6 +142,7 @@ public abstract class UnsafeBuckets implements Buckets {
 				putValue( entry, bucket, value );
 				return true;
 			} else if ( currentValue == value && noDuplicate ) {
+				duplicates++;
 				return true;
 			}
 		}

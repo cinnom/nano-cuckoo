@@ -1,4 +1,4 @@
-package buckets.internal;
+package org.cinnom.nanocuckoo.buckets.internal;
 
 /**
  * Created by rjones on 6/22/17.
@@ -14,10 +14,10 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 	private final int initClearMask;
 
 
-	public ConfigurableUnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits )
+	public ConfigurableUnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits, boolean allowUpsize )
 			throws NoSuchFieldException, IllegalAccessException {
 
-		super( entries, capacity, maxEntries, fpBits );
+		super( entries, capacity, maxEntries, fpBits, allowUpsize );
 
 		int shift = BITS_PER_INT - fpBits;
 		initClearMask = (-1 >>> shift) << shift;

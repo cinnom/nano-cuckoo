@@ -1,3 +1,4 @@
+import org.cinnom.nanocuckoo.NanoCuckooFilter;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
@@ -5,20 +6,20 @@ import java.io.UnsupportedEncodingException;
 /**
  * Created by rjones on 6/26/17.
  */
-public class CuckooFilterTest {
+public class NanoCuckooFilterTest {
 
 	@Test
 	public void insertTest() {
 
-		int entryBits = 1;
-		int capacity = 50000000;
+		int entryBits = 2;
+		int capacity = 10;
 		int maxEntries = 4;
 		int fpBits = 8;
 
 		try {
-			CuckooFilter cuckooFilter = new CuckooFilter( entryBits, capacity, false, maxEntries, fpBits );
+			NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( entryBits, capacity, false, maxEntries, fpBits, false );
 
-			int runs = 100000000;
+			int runs = 40;
 			int actualRuns = 0;
 
 			System.out.println( cuckooFilter.getMemoryUsageBytes() );
@@ -38,7 +39,9 @@ public class CuckooFilterTest {
 				}
 			}
 			long currentMillis2 = System.currentTimeMillis();
-			System.out.println("Insert ops/sec: " + (runs / ((currentMillis2 - currentMillis1) / 1000)) );
+			//System.out.println("Insert ops/sec: " + (runs / ((currentMillis2 - currentMillis1) / 1000)) );
+
+			System.out.println(cuckooFilter.getDuplicates());
 
 			for(int i = 0; i < runs; i++) {
 

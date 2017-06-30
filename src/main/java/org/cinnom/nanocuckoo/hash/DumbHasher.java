@@ -1,9 +1,9 @@
-package hash;
+package org.cinnom.nanocuckoo.hash;
 
 import java.lang.reflect.Field;
 import java.util.SplittableRandom;
 
-import random.Randomizer;
+import org.cinnom.nanocuckoo.random.Randomizer;
 import sun.misc.Unsafe;
 
 /**
@@ -11,13 +11,10 @@ import sun.misc.Unsafe;
  */
 public class DumbHasher implements FingerprintHasher, Randomizer {
 
-	private static final int POS_MASK = 0x7FFFFFFF;
-
 	private final Unsafe unsafe;
 	private final SplittableRandom random;
 
 	private final long address;
-	private final long capacity;
 	private final long capacityMask;
 
 	private long randomLol = 0;
@@ -45,8 +42,6 @@ public class DumbHasher implements FingerprintHasher, Randomizer {
 		}
 
 		unsafe.putLong( address + ( capacity - 1 ), random.nextLong() );
-
-		this.capacity = capacity;
 	}
 
 	@Override

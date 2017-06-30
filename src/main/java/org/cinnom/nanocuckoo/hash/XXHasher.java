@@ -1,4 +1,4 @@
-package hash;
+package org.cinnom.nanocuckoo.hash;
 
 import net.jpountz.xxhash.XXHashFactory;
 

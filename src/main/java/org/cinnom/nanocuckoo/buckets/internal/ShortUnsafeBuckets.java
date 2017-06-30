@@ -1,9 +1,4 @@
-package buckets.internal;
-
-import buckets.Buckets;
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
+package org.cinnom.nanocuckoo.buckets.internal;
 
 /**
  * Created by rjones on 6/22/17.
@@ -13,9 +8,9 @@ public class ShortUnsafeBuckets extends UnsafeBuckets {
 	private static final int FP_BITS = 16;
 	private static final int BYTE_SHIFT = 1;
 
-	public ShortUnsafeBuckets(int entries, long capacity, int maxEntries) throws NoSuchFieldException, IllegalAccessException {
+	public ShortUnsafeBuckets(int entries, long capacity, int maxEntries, boolean allowUpsize ) throws NoSuchFieldException, IllegalAccessException {
 
-		super (entries, capacity, maxEntries, FP_BITS );
+		super (entries, capacity, maxEntries, FP_BITS, allowUpsize );
 	}
 
 	protected int getValue(int entry, long bucket) {

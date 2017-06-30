@@ -1,4 +1,4 @@
-import buckets.internal.ConfigurableUnsafeBuckets;
+import org.cinnom.nanocuckoo.buckets.internal.ConfigurableUnsafeBuckets;
 import org.junit.Test;
 
 /**
@@ -14,7 +14,7 @@ public class ConfigurableUnsafeBucketsTest {
 		int maxEntries = 3;
 		int fpBits = 7;
 
-		ConfigurableUnsafeBuckets unsafeBuckets = new ConfigurableUnsafeBuckets( entries, capacity, maxEntries, fpBits );
+		ConfigurableUnsafeBuckets unsafeBuckets = new ConfigurableUnsafeBuckets( entries, capacity, maxEntries, fpBits, false );
 
 		//unsafeBuckets.insert( 0, 101, true );
 

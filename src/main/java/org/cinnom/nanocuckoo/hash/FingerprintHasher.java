@@ -1,4 +1,4 @@
-package hash;
+package org.cinnom.nanocuckoo.hash;
 
 /**
  * Created by rjones on 6/29/17.

@@ -1,4 +1,4 @@
-package buckets;
+package org.cinnom.nanocuckoo.buckets;
 
 /**
  * Created by rjones on 6/28/17.
@@ -24,4 +24,6 @@ public interface Buckets {
 	void delete();
 
 	int getEntryMask();
+
+	int getDuplicates();
 }
