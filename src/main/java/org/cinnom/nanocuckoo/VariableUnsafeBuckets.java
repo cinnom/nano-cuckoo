@@ -1,9 +1,9 @@
-package org.cinnom.nanocuckoo.buckets.internal;
+package org.cinnom.nanocuckoo;
 
 /**
  * Created by rjones on 6/22/17.
  */
-public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
+final class VariableUnsafeBuckets extends UnsafeBuckets {
 
 	private static final int BITS_PER_INT = 32;
 	private static final int DIV_32 = 5;
@@ -14,7 +14,7 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 	private final int initClearMask;
 
 
-	public ConfigurableUnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits )
+	public VariableUnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits )
 			throws NoSuchFieldException, IllegalAccessException {
 
 		super( entries, capacity, maxEntries, fpBits );
@@ -42,25 +42,30 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 		int shift = BITS_PER_INT - (startBit + fpBits);
 
 		int getInt = unsafe.getInt( bucketByte );
-		int putInt = getInt;
+		int putValue = value;
 
 		getInt &= clearMask;
 
-		int putValue = value;
 		startBit = 0;
-		if(shift > 0) {
+		if ( shift > 0 ) {
 			getInt >>>= shift;
 			putValue = value << shift;
-		}
-		else if (shift < 0) {
+		} else if ( shift < 0 ) {
 			startBit = -shift;
 			getInt <<= startBit;
 			putValue = value >>> startBit;
 		}
 
-		putInt = ( putInt & (~clearMask) ) | putValue;
+		clearMask = ~clearMask;
 
-		unsafe.putInt( bucketByte, putInt );
+		int originalInt;
+		int putInt;
+		do {
+			originalInt = unsafe.getInt( bucketByte );
+
+			putInt = ( originalInt & clearMask ) | putValue;
+
+		} while (!unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ));
 
 		if(startBit > 0) {
 
@@ -68,17 +73,18 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 
 			shift = BITS_PER_INT - startBit;
 
-			putInt = unsafe.getInt( bucketByte );
-
-			getInt |= putInt >>> shift;
-
 			clearMask = -1 >>> startBit;
 
 			putValue = value << shift;
 
-			putInt = ( putInt & clearMask ) | putValue;
+			do {
+				originalInt = unsafe.getInt( bucketByte );
 
-			unsafe.putInt( bucketByte, putInt );
+				putInt = ( originalInt & clearMask ) | putValue;
+
+			} while (!unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ));
+
+			getInt |= originalInt >>> shift;
 		}
 
 		return getInt;
@@ -132,11 +138,14 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 		int putValue = leftShift > 0 ? value << leftShift : value;
 		putValue = leftShift < 0 ? value >>> (startBit = -leftShift) : putValue;
 
-		int putInt = unsafe.getInt( bucketByte );
+		int originalInt;
+		int putInt;
+		do {
+			originalInt = unsafe.getInt( bucketByte );
 
-		putInt = ( putInt & clearMask ) | putValue;
+			putInt = ( originalInt & clearMask ) | putValue;
 
-		unsafe.putInt( bucketByte, putInt );
+		} while (!unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ));
 
 		if ( startBit > 0 ) {
 
@@ -146,11 +155,12 @@ public class ConfigurableUnsafeBuckets extends UnsafeBuckets {
 
 			bucketByte += BYTES_PER_INT;
 
-			putInt = unsafe.getInt( bucketByte );
+			do {
+				originalInt = unsafe.getInt( bucketByte );
 
-			putInt = ( putInt & clearMask ) | putValue;
+				putInt = ( originalInt & clearMask ) | putValue;
 
-			unsafe.putInt( bucketByte, putInt );
+			} while (!unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ));
 		}
 
 	}

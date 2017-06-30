@@ -5,7 +5,7 @@ import net.jpountz.xxhash.XXHashFactory;
 /**
  * Created by rjones on 6/22/17.
  */
-public class XXHasher implements FingerprintHasher, BucketHasher {
+public final class XXHasher implements FingerprintHasher, BucketHasher {
 
 	private final XXHashFactory factory = XXHashFactory.fastestInstance();
 

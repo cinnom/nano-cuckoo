@@ -1,9 +1,9 @@
-package org.cinnom.nanocuckoo.buckets.internal;
+package org.cinnom.nanocuckoo;
 
 /**
  * Created by rjones on 6/22/17.
  */
-public class ByteUnsafeBuckets extends UnsafeBuckets {
+final class ByteUnsafeBuckets extends UnsafeBuckets {
 
 	private static final int FP_BITS = 8;
 

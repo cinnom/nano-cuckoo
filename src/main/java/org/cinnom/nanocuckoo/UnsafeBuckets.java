@@ -1,15 +1,14 @@
-package org.cinnom.nanocuckoo.buckets.internal;
+package org.cinnom.nanocuckoo;
 
-import org.cinnom.nanocuckoo.buckets.Buckets;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by rjones on 6/28/17.
  */
-public abstract class UnsafeBuckets implements Buckets {
+abstract class UnsafeBuckets {
 
 	private static final int DIV_8 = 3;
 	private static final long MOD_8_MASK = 0x0000000000000007;
@@ -24,14 +23,14 @@ public abstract class UnsafeBuckets implements Buckets {
 
 	private final int bucketBits;
 
-	protected final Unsafe unsafe;
-	protected long[] addresses;
+	private int duplicates = 0;
 
-	protected int fpBits;
+	final Unsafe unsafe;
+	long[] addresses;
+	int fpBits;
 
-	public int duplicates = 0;
 
-	public UnsafeBuckets( int entryBits, long capacity, int maxEntries, int fpBits )
+	public UnsafeBuckets( int entries, long capacity, int maxEntries, int fpBits )
 			throws NoSuchFieldException, IllegalAccessException {
 
 		Field singleoneInstanceField = Unsafe.class.getDeclaredField( "theUnsafe" );
@@ -46,13 +45,13 @@ public abstract class UnsafeBuckets implements Buckets {
 
 		bucketBits = 64 - Long.bitCount( realCapacity - 1 );
 
-		entries = (int) Math.pow(2, entryBits);
-		entryMask = entries - 1;
+		this.entries = entries;
+		entryMask = this.entries - 1;
 
 		long capacityBytes = (realCapacity >>> DIV_8) * fpBits + 4;
 
-		addresses = new long[entries];
-		for ( int i = 0; i < entries; i++ ) {
+		addresses = new long[this.entries];
+		for ( int i = 0; i < this.entries; i++ ) {
 			addresses[i] = unsafe.allocateMemory( capacityBytes );
 			unsafe.setMemory( addresses[i], capacityBytes, (byte) 0 );
 		}
@@ -100,8 +99,6 @@ public abstract class UnsafeBuckets implements Buckets {
 			newAddresses[i] = unsafe.allocateMemory( capacityBytes );
 			unsafe.setMemory( newAddresses[i], capacityBytes, (byte) 0 );
 		}
-		// newAddresses[entries - 1] = unsafe.allocateMemory( capacityBytes );
-		// unsafe.setMemory( newAddresses[entries - 1], capacityBytes, (byte) 0 );
 
 		addresses = newAddresses;
 

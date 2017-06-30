@@ -5,7 +5,7 @@ package org.cinnom.nanocuckoo.hash;
  *
  * Created by cinnom on 6/30/2017.
  */
-public class FixedHasher implements FingerprintHasher {
+public final class FixedHasher implements FingerprintHasher {
 
     private static final long MURMUR_HASH_MIX = 0xC4CEB9fE1A85EC53L;
 
