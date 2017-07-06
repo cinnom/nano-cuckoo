@@ -1,10 +1,14 @@
 package org.cinnom.nanocuckoo.hash;
 
 /**
- * Created by rjones on 6/29/17.
+ * 64-bit Hasher for hashing initial bucket indices.
  */
 public interface BucketHasher {
 
-	long getHash( final byte[] data );
-
+    /**
+     * Hash data into 64 bits.
+     * @param data Data to hash.
+     * @return 64-bit hash.
+     */
+    long getHash(final byte[] data);
 }

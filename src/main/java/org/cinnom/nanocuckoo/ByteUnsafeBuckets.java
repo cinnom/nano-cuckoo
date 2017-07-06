@@ -1,24 +1,26 @@
 package org.cinnom.nanocuckoo;
 
 /**
- * Created by rjones on 6/22/17.
+ * UnsafeBuckets type to be used when fingerprints are exactly 8 bits.
  */
 final class ByteUnsafeBuckets extends UnsafeBuckets {
 
-	private static final int FP_BITS = 8;
+    private static final int FP_BITS = 8;
 
-	public ByteUnsafeBuckets(int entries, long capacity, int maxEntries ) throws NoSuchFieldException, IllegalAccessException {
+    ByteUnsafeBuckets(int entries, long capacity, int maxEntries, boolean countingDisabled) throws NoSuchFieldException, IllegalAccessException {
 
-		super (entries, capacity, maxEntries, FP_BITS );
-	}
+        super(entries, capacity, maxEntries, FP_BITS, countingDisabled);
+    }
 
-	protected int getValue(int entry, long bucket) {
+    @Override
+    int getValue(int entry, long bucket) {
 
-		return unsafe.getByte( addresses[entry] + bucket ) & 0x000000ff;
-	}
+        return unsafe.getByteVolatile(null, addresses[entry] + bucket) & 0x000000FF;
+    }
 
-	protected void putValue(int entry, long bucket, int value) {
+    @Override
+    void putValue(int entry, long bucket, int value) {
 
-		unsafe.putByte( addresses[entry] + bucket, (byte) value );
-	}
+        unsafe.putByteVolatile(null, addresses[entry] + bucket, (byte) value);
+    }
 }

@@ -1,10 +1,15 @@
 package org.cinnom.nanocuckoo.hash;
 
 /**
- * Created by rjones on 6/29/17.
+ * 64-bit Hasher for hashing fingerprint values.
  */
 public interface FingerprintHasher {
 
-	long getHash(int value);
+    /**
+     * Hash a fingerprint value into 64 bits.
+     * @param value Value to hash.
+     * @return 64-bit hash.
+     */
+    long getHash(int value);
 
 }
