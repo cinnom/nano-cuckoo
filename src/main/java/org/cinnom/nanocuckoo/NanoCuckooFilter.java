@@ -7,16 +7,18 @@ import org.cinnom.nanocuckoo.hash.FingerprintHasher;
 import org.cinnom.nanocuckoo.hash.FixedHasher;
 import org.cinnom.nanocuckoo.hash.XXHasher;
 
-import java.util.SplittableRandom;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
-
 /**
+ * <p>
  * Implements a Cuckoo Filter, as per "Cuckoo Filter: Practically Better Than Bloom" by Bin Fan, David G. Andersen,
- * Michael Kaminsky, Michael D. Mitzenmacher. <p> This filter uses sun.misc.Unsafe to allocate native memory. Filter
- * creation will fail if Unsafe can't be obtained, or if memory can't be allocated. </p><p> Close this filter via its
- * close() method, or a memory leak WILL occur. </p>
+ * Michael Kaminsky, Michael D. Mitzenmacher.
+ * </p>
+ * <p>
+ * This filter uses sun.misc.Unsafe to allocate native memory. Filter creation will fail if Unsafe can't be obtained, or
+ * if memory can't be allocated.
+ * </p>
+ * <p>
+ * Close this filter via its close() method, or a memory leak WILL occur.
+ * </p>
  */
 public class NanoCuckooFilter {
 
@@ -26,277 +28,116 @@ public class NanoCuckooFilter {
 	private static final int BITS_PER_LONG = 64;
 
 	private final UnsafeBuckets buckets;
-	private final SplittableRandom random;
 	private final StringEncoder stringEncoder;
 	private final BucketHasher bucketHasher;
 	private final FingerprintHasher fpHasher;
 
-	private final boolean expansionEnabled;
 	private final int fpBits;
 	private final int fpPerLong;
 	private final int fpMask;
-	private final int maxKicks;
-	private final int concurrencyBucketMask;
-	private final ReentrantLock swapLock = new ReentrantLock();
-	private final ReentrantLock[] bucketLocks;
-	private final AtomicLong count = new AtomicLong();
-	private final long maxFastCount;
-	private final AtomicBoolean insertAllowed = new AtomicBoolean( true );
 
-	private volatile int bootedFingerprint = -1;
-	private volatile long bootedBucket = -1;
+	private final KickedValues kickedValues = new KickedValues();
+	private final BucketLocker bucketLocker;
+	private final Swapper swapper;
 
-	private NanoCuckooFilter( int entriesPerBucket, long capacity, boolean expansionEnabled, int maxEntriesPerBucket,
-							  int fpBits, int maxKicks, int seed, BucketHasher bucketHasher, FingerprintHasher fpHasher,
-							  int concurrency, boolean countingEnabled, double smartInsertLoadFactor,
-							  StringEncoder stringEncoder )
+	private NanoCuckooFilter( int entriesPerBucket, long capacity, int fpBits, int maxKicks, int seed,
+			BucketHasher bucketHasher, FingerprintHasher fpHasher, int concurrency, boolean countingEnabled,
+			double smartInsertLoadFactor, StringEncoder stringEncoder, ConcurrentSwapSafety concurrentSwapSafety )
 			throws NoSuchFieldException, IllegalAccessException {
 
 		boolean countingDisabled = !countingEnabled;
 
+		long bucketCount = capacity / entriesPerBucket;
+
 		switch ( fpBits ) {
 			case BITS_PER_BYTE:
-				buckets = new ByteUnsafeBuckets( entriesPerBucket, capacity, maxEntriesPerBucket, countingDisabled );
+				buckets = new ByteUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
 				break;
 			case BITS_PER_SHORT:
-				buckets = new ShortUnsafeBuckets( entriesPerBucket, capacity, maxEntriesPerBucket, countingDisabled );
+				buckets = new ShortUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
 				break;
 			case BITS_PER_INT:
-				buckets = new IntUnsafeBuckets( entriesPerBucket, capacity, maxEntriesPerBucket, countingDisabled );
+				buckets = new IntUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
 				break;
 			default:
-				buckets = new VariableUnsafeBuckets( entriesPerBucket, capacity, maxEntriesPerBucket, fpBits, countingDisabled );
+				buckets = new VariableUnsafeBuckets( entriesPerBucket, bucketCount, fpBits, countingDisabled );
 				break;
 		}
-
-		random = new SplittableRandom( seed );
 
 		this.stringEncoder = stringEncoder;
 		this.bucketHasher = bucketHasher;
 		this.fpHasher = fpHasher;
-
-		this.expansionEnabled = expansionEnabled;
 		this.fpBits = fpBits;
 
+		this.bucketLocker = new BucketLocker( concurrency, buckets.getBucketCount() );
+
+		// Set how many potential fingerprints we can locate in a bucket hash
 		fpPerLong = BITS_PER_LONG / fpBits;
 
-		int shift = BITS_PER_INT - fpBits;
-		fpMask = -1 >>> shift;
+		// Set the mask that will pull fingerprint bits from the bucket hash
+		fpMask = -1 >>> ( BITS_PER_INT - fpBits );
 
-		this.maxKicks = maxKicks;
+		switch ( concurrentSwapSafety ) {
 
-		if ( buckets.getBucketCount() < Integer.MAX_VALUE ) {
-			concurrency = Math.min( concurrency, (int) buckets.getBucketCount() );
+			case FAST:
+				swapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed );
+				break;
+			case SMART:
+				swapper = new SmartSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed,
+						smartInsertLoadFactor );
+				break;
+			case RELIABLE:
+			default:
+				swapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed );
+				break;
 		}
-		this.concurrencyBucketMask = concurrency - 1;
-
-		bucketLocks = new ReentrantLock[concurrency];
-		for ( int i = 0; i < concurrency; i++ ) {
-			bucketLocks[i] = new ReentrantLock();
-		}
-
-		this.maxFastCount = (long) ( buckets.getCapacity() * smartInsertLoadFactor );
 	}
 
 	/**
 	 * Insert a String into the filter. Will use the initially set String encoder (UTF8Encoder by default).
 	 *
-	 * @param value        String to insert.
-	 * @param insertSafety Insert safety/speed.
+	 * @param value
+	 *            String to insert.
 	 * @return True if value successfully inserted, false if filter is full.
 	 */
-	public boolean insert( String value, InsertSafety insertSafety ) {
+	public boolean insert( String value ) {
 
-		return insert( stringEncoder.encode( value ), insertSafety );
+		return insert( stringEncoder.encode( value ) );
 	}
 
 	/**
 	 * Insert a byte array into the filter.
 	 *
-	 * @param data         Data to insert.
-	 * @param insertSafety Insert safety/speed.
+	 * @param data
+	 *            Data to insert.
 	 * @return True if value successfully inserted, false if filter is full.
 	 */
-	public boolean insert( byte[] data, InsertSafety insertSafety ) {
+	public boolean insert( byte[] data ) {
 
-		return insert( bucketHasher.getHash( data ), insertSafety );
+		return insert( bucketHasher.getHash( data ) );
 	}
 
 	/**
 	 * Insert a pre-hashed value into the filter.
 	 *
-	 * @param hash         Hash to insert.
-	 * @param insertSafety Insert safety/speed.
+	 * @param hash
+	 *            Hash to insert.
 	 * @return True if value successfully inserted, false if filter is full.
 	 */
-	public boolean insert( long hash, InsertSafety insertSafety ) {
+	public boolean insert( long hash ) {
 
-		if ( insertAllowed.get() ) {
+		long bucket1 = buckets.getBucket( hash );
+		int fingerprint = fingerprintFromLong( hash );
 
-			long bucket1 = buckets.getBucket( hash );
-
-			int fingerprint = fingerprintFromLong( hash );
-
-			boolean fast = true;
-
-			if ( insertSafety == InsertSafety.NORMAL || ( insertSafety == InsertSafety.SMART && count.get() > maxFastCount ) ) {
-				fast = false;
-			}
-
-			if ( insertFingerprint( fingerprint, bucket1, fast ) ) {
-				count.incrementAndGet();
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private int fingerprintFromLong( long hash ) {
-
-		for ( int i = 0; i < fpPerLong; i++ ) {
-
-			int tempFp = ( (int) hash ) & fpMask;
-			if ( tempFp != 0 ) {
-				return tempFp;
-			}
-			hash >>>= fpBits;
-		}
-
-		return 1;
-	}
-
-	private void lockBucket( long bucket ) {
-
-		bucketLocks[(int) bucket & concurrencyBucketMask].lock();
-	}
-
-	private void unlockBucket( long bucket ) {
-
-		bucketLocks[(int) bucket & concurrencyBucketMask].unlock();
-	}
-
-	private boolean insertFingerprint( int fingerprint, long bucket1, boolean fast ) {
-
-		try {
-			lockBucket( bucket1 );
-			if ( buckets.insert( bucket1, fingerprint ) ) {
-				return true;
-			}
-		} finally {
-			unlockBucket( bucket1 );
-		}
-
-		long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
-
-		try {
-			lockBucket( bucket2 );
-			if ( buckets.insert( bucket2, fingerprint ) ) {
-				return true;
-			}
-		} finally {
-			unlockBucket( bucket2 );
-		}
-
-		if ( fast ) {
-			return fastSwap( fingerprint, bucket2 );
-		}
-
-		try {
-			swapLock.lock();
-
-			if ( insertAllowed.get() ) {
-
-				bootedFingerprint = fingerprint;
-				bootedBucket = bucket2;
-
-				return safeSwap();
-			}
-
-		} finally {
-			swapLock.unlock();
-		}
-
-		return false;
-	}
-
-	private boolean safeSwap() {
-
-		for ( int n = 0; n < maxKicks; n++ ) {
-
-			int entrySwap = random.nextInt() & buckets.getEntryMask();
-
-			try {
-				lockBucket( bootedBucket );
-				bootedFingerprint = buckets.swap( entrySwap, bootedBucket, bootedFingerprint );
-			} finally {
-				unlockBucket( bootedBucket );
-			}
-
-			bootedBucket = bootedBucket ^ buckets.getBucket( fpHasher.getHash( bootedFingerprint ) );
-
-			try {
-				lockBucket( bootedBucket );
-				if ( buckets.insert( bootedBucket, bootedFingerprint ) ) {
-					return true;
-				}
-			} finally {
-				unlockBucket( bootedBucket );
-			}
-		}
-
-		if ( expansionEnabled && buckets.expand() ) {
-			return insertFingerprint( bootedFingerprint, bootedBucket, false );
-		}
-
-		insertAllowed.set( false );
-
-		return true;
-	}
-
-	private boolean fastSwap( int fingerprint, long bucket ) {
-
-		for ( int n = 0; n < maxKicks; n++ ) {
-
-			int entrySwap = random.nextInt() & buckets.getEntryMask();
-
-			try {
-				lockBucket( bucket );
-				fingerprint = buckets.swap( entrySwap, bucket, fingerprint );
-			} finally {
-				unlockBucket( bucket );
-			}
-
-			bucket = bucket ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
-
-			try {
-				lockBucket( bucket );
-				if ( buckets.insert( bucket, fingerprint ) ) {
-					return true;
-				}
-			} finally {
-				unlockBucket( bucket );
-			}
-		}
-
-		if ( expansionEnabled && buckets.expand() ) {
-			return insertFingerprint( fingerprint, bucket, true );
-		}
-
-		if ( insertAllowed.compareAndSet( false, true ) ) {
-			bootedFingerprint = fingerprint;
-			bootedBucket = bucket;
-			return true;
-		}
-
-		return false;
+		return insertFingerprint( fingerprint, bucket1 );
 	}
 
 	/**
 	 * Check if a given String has been inserted into the filter. Will use the initially set String encoder (UTF8Encoder
 	 * by default).
 	 *
-	 * @param value String to check.
+	 * @param value
+	 *            String to check.
 	 * @return True if value is in filter, false if not.
 	 */
 	public boolean contains( String value ) {
@@ -307,12 +148,23 @@ public class NanoCuckooFilter {
 	/**
 	 * Check if a given byte array has been inserted into the filter.
 	 *
-	 * @param data Data to check.
+	 * @param data
+	 *            Data to check.
 	 * @return True if value is in filter, false if not.
 	 */
 	public boolean contains( byte[] data ) {
 
-		long hash = bucketHasher.getHash( data );
+		return contains( bucketHasher.getHash( data ) );
+	}
+
+	/**
+	 * Check if a given pre-hashed value has been inserted into the filter.
+	 *
+	 * @param hash
+	 *            Hash to check.
+	 * @return True if hash is in filter, false if not.
+	 */
+	public boolean contains( long hash ) {
 
 		long bucket1 = buckets.getBucket( hash );
 
@@ -324,22 +176,42 @@ public class NanoCuckooFilter {
 
 		long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
 
-		if ( buckets.contains( bucket2, fingerprint ) ) {
-			return true;
-		}
-
-		return ( bucket1 == bootedBucket || bucket2 == bootedBucket ) && fingerprint == bootedFingerprint;
+		return buckets.contains( bucket2, fingerprint ) || kickedValues.equals( fingerprint, bucket1, bucket2 );
 	}
 
 	/**
-	 * Count occurrences of data in filter.
+	 * Count occurrences of a given String in filter. Will use the initially set String encoder (UTF8Encoder by
+	 * default).
 	 *
-	 * @param data Data to count.
+	 * @param value
+	 *            Value to count.
+	 * @return Number of times value was previously inserted.
+	 */
+	public int count( String value ) {
+
+		return count( stringEncoder.encode( value ) );
+	}
+
+	/**
+	 * Count occurrences of given byte data in filter.
+	 *
+	 * @param data
+	 *            Data to count.
 	 * @return Number of times data was previously inserted.
 	 */
 	public int count( byte[] data ) {
 
-		long hash = bucketHasher.getHash( data );
+		return count( bucketHasher.getHash( data ) );
+	}
+
+	/**
+	 * Count occurrences of a given pre-hashed value in filter.
+	 *
+	 * @param hash
+	 *            Hash to count.
+	 * @return Number of times hash was previously inserted.
+	 */
+	public int count( long hash ) {
 
 		int fingerprint = fingerprintFromLong( hash );
 		long bucket1 = buckets.getBucket( hash );
@@ -347,7 +219,7 @@ public class NanoCuckooFilter {
 
 		int count = buckets.count( bucket1, fingerprint ) + buckets.count( bucket2, fingerprint );
 
-		if ( ( bucket1 == bootedBucket || bucket2 == bootedBucket ) && fingerprint == bootedFingerprint ) {
+		if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
 			count++;
 		}
 
@@ -355,14 +227,38 @@ public class NanoCuckooFilter {
 	}
 
 	/**
-	 * Delete all occurrences of data in filter.
+	 * Delete all occurrences of a given String in filter. Will use the initially set String encoder (UTF8Encoder by
+	 * default).
 	 *
-	 * @param data Data to delete.
+	 * @param value
+	 *            Value to delete.
+	 * @return Number of times value was deleted.
+	 */
+	public int deleteAll( String value ) {
+
+		return deleteAll( stringEncoder.encode( value ) );
+	}
+
+	/**
+	 * Delete all occurrences of given byte data in filter.
+	 *
+	 * @param data
+	 *            Data to delete.
 	 * @return Number of times data was deleted.
 	 */
 	public int deleteAll( byte[] data ) {
 
-		long hash = bucketHasher.getHash( data );
+		return deleteAll( bucketHasher.getHash( data ) );
+	}
+
+	/**
+	 * Delete all occurrences of a given pre-hashed value in filter.
+	 *
+	 * @param hash
+	 *            hash to delete.
+	 * @return Number of times hash was deleted.
+	 */
+	public int deleteAll( long hash ) {
 
 		int fingerprint = fingerprintFromLong( hash );
 		long bucket1 = buckets.getBucket( hash );
@@ -370,47 +266,78 @@ public class NanoCuckooFilter {
 
 		int deletedCount;
 		try {
-			lockBucket( bucket1 );
+			bucketLocker.lockBucket( bucket1 );
 			deletedCount = buckets.deleteAll( bucket1, fingerprint );
 		} finally {
-			unlockBucket( bucket1 );
+			bucketLocker.unlockBucket( bucket1 );
 		}
 		try {
-			lockBucket( bucket2 );
+			bucketLocker.lockBucket( bucket2 );
 			deletedCount += buckets.deleteAll( bucket2, fingerprint );
 		} finally {
-			unlockBucket( bucket2 );
+			bucketLocker.unlockBucket( bucket2 );
 		}
 
-		if ( ( bucket1 == bootedBucket || bucket2 == bootedBucket ) && fingerprint == bootedFingerprint ) {
-			bootedFingerprint = -1;
-			bootedBucket = -1;
+		kickedValues.lock();
+		if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
+			kickedValues.clear();
 			deletedCount++;
 		}
+		reinsertKickedFingerprint();
+		kickedValues.unlock();
 
 		return deletedCount;
 	}
 
 	/**
-	 * Delete a specific number of occurrences of data in filter.
+	 * Delete a specific number of occurrences of a given String in filter. Will use the initially set String encoder
+	 * (UTF8Encoder by default).
 	 *
-	 * @param data  Data to delete.
-	 * @param count Number of occurrences to delete.
+	 * @param value
+	 *            Value to delete.
+	 * @param count
+	 *            Number of occurrences to delete.
+	 * @return Number of times value was deleted.
+	 */
+	public int deleteCount( String value, int count ) {
+
+		return deleteCount( stringEncoder.encode( value ), count );
+	}
+
+	/**
+	 * Delete a specific number of occurrences of given byte data in filter.
+	 *
+	 * @param data
+	 *            Data to delete.
+	 * @param count
+	 *            Number of occurrences to delete.
 	 * @return Number of times data was deleted.
 	 */
 	public int deleteCount( byte[] data, int count ) {
 
-		long hash = bucketHasher.getHash( data );
+		return deleteCount( bucketHasher.getHash( data ), count );
+	}
+
+	/**
+	 * Delete a specific number of occurrences of a given pre-hashed value in filter.
+	 *
+	 * @param hash
+	 *            Hash to delete.
+	 * @param count
+	 *            Number of occurrences to delete.
+	 * @return Number of times hash was deleted.
+	 */
+	public int deleteCount( long hash, int count ) {
 
 		int fingerprint = fingerprintFromLong( hash );
 		long bucket1 = buckets.getBucket( hash );
 
 		int deletedCount;
 		try {
-			lockBucket( bucket1 );
+			bucketLocker.lockBucket( bucket1 );
 			deletedCount = buckets.deleteCount( bucket1, fingerprint, count );
 		} finally {
-			unlockBucket( bucket1 );
+			bucketLocker.unlockBucket( bucket1 );
 		}
 
 		int remaining = count - deletedCount;
@@ -419,61 +346,92 @@ public class NanoCuckooFilter {
 			long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
 
 			try {
-				lockBucket( bucket2 );
+				bucketLocker.lockBucket( bucket2 );
 				deletedCount += buckets.deleteCount( bucket2, fingerprint, remaining );
 			} finally {
-				unlockBucket( bucket2 );
+				bucketLocker.unlockBucket( bucket2 );
 			}
 
 			if ( deletedCount < count ) {
-				if ( ( bucket1 == bootedBucket || bucket2 == bootedBucket ) && fingerprint == bootedFingerprint ) {
-					bootedFingerprint = -1;
-					bootedBucket = -1;
+				kickedValues.lock();
+				if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
+					kickedValues.clear();
 					deletedCount++;
 				}
+				reinsertKickedFingerprint();
+				kickedValues.unlock();
 			}
 		}
 		return deletedCount;
 	}
 
 	/**
-	 * Delete one occurrence of data in filter.
+	 * Delete one occurrence of a given String in filter. Will use the initially set String encoder (UTF8Encoder by
+	 * default).
 	 *
-	 * @param data Data to delete.
+	 * @param value
+	 *            Valie to delete.
+	 * @return True if value was deleted, false if not.
+	 */
+	public boolean delete( String value ) {
+
+		return delete( stringEncoder.encode( value ) );
+	}
+
+	/**
+	 * Delete one occurrence of given byte data in filter.
+	 *
+	 * @param data
+	 *            Data to delete.
 	 * @return True if data was deleted, false if not.
 	 */
 	public boolean delete( byte[] data ) {
 
-		long hash = bucketHasher.getHash( data );
+		return delete( bucketHasher.getHash( data ) );
+	}
+
+	/**
+	 * Delete one occurrence of a given pre-hashed value in filter.
+	 *
+	 * @param hash
+	 *            Hash to delete.
+	 * @return True if hash was deleted, false if not.
+	 */
+	public boolean delete( long hash ) {
 
 		long bucket1 = buckets.getBucket( hash );
 
 		int fingerprint = fingerprintFromLong( hash );
 
 		try {
-			lockBucket( bucket1 );
+			bucketLocker.lockBucket( bucket1 );
 			if ( buckets.delete( bucket1, fingerprint ) ) {
 				return true;
 			}
 		} finally {
-			unlockBucket( bucket1 );
+			bucketLocker.unlockBucket( bucket1 );
 		}
 
 		long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
 
 		try {
-			lockBucket( bucket2 );
+			bucketLocker.lockBucket( bucket2 );
 			if ( buckets.delete( bucket2, fingerprint ) ) {
 				return true;
 			}
 		} finally {
-			unlockBucket( bucket2 );
+			bucketLocker.unlockBucket( bucket2 );
 		}
 
-		if ( ( bucket1 == bootedBucket || bucket2 == bootedBucket ) && fingerprint == bootedFingerprint ) {
-			bootedFingerprint = -1;
-			bootedBucket = -1;
-			return true;
+		try {
+			kickedValues.lock();
+			if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
+				kickedValues.clear();
+				return true;
+			}
+		} finally {
+			reinsertKickedFingerprint();
+			kickedValues.unlock();
 		}
 
 		return false;
@@ -500,7 +458,15 @@ public class NanoCuckooFilter {
 	 */
 	public double getLoadFactor() {
 
-		return (double) count.get() / buckets.getCapacity();
+		return (double) buckets.getInsertedCount() / buckets.getCapacity();
+	}
+
+	/**
+	 * Double the number of entries per bucket. This will double memory usage, and will also roughly double the max FPP.
+	 */
+	public void expand() {
+
+		buckets.expand();
 	}
 
 	/**
@@ -511,6 +477,58 @@ public class NanoCuckooFilter {
 		buckets.close();
 	}
 
+	private int fingerprintFromLong( long hash ) {
+
+		for ( int i = 0; i < fpPerLong; i++ ) {
+
+			int tempFp = ( (int) hash ) & fpMask;
+			if ( tempFp != 0 ) {
+				return tempFp;
+			}
+			hash >>>= fpBits;
+		}
+
+		return 1;
+	}
+
+	private boolean insertFingerprint( int fingerprint, long bucket1 ) {
+
+		try {
+			bucketLocker.lockBucket( bucket1 );
+			if ( buckets.insert( bucket1, fingerprint ) ) {
+				return true;
+			}
+		} finally {
+			bucketLocker.unlockBucket( bucket1 );
+		}
+
+		long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
+
+		try {
+			bucketLocker.lockBucket( bucket2 );
+			if ( buckets.insert( bucket2, fingerprint ) ) {
+				return true;
+			}
+		} finally {
+			bucketLocker.unlockBucket( bucket2 );
+		}
+
+		return swapper.swap( fingerprint, bucket2 );
+	}
+
+	private void reinsertKickedFingerprint() {
+
+		if ( !kickedValues.isClear() ) {
+
+			int kickedFingerprint = kickedValues.getKickedFingerprint();
+			long kickedBucket = kickedValues.getKickedBucket();
+			kickedValues.clear();
+			buckets.decrementInsertedCount();
+
+			insertFingerprint( kickedFingerprint, kickedBucket );
+		}
+	}
+
 	/**
 	 * Builder for NanoCuckooFilter.
 	 */
@@ -519,43 +537,49 @@ public class NanoCuckooFilter {
 		private static final int POS_INT = 0x7FFFFFFF;
 		private final long capacity;
 		private int entriesPerBucket = 4;
-		private boolean expansionEnabled = false;
-		private int maxEntriesPerBucket = 8;
 		private int fpBits = 8;
 		private int maxKicks = 400;
 		private int seed = 0x48F7E28A;
 		private int concurrency = 64;
 		private boolean countingEnabled = false;
 		private double smartInsertLoadFactor = 0.90;
+		private ConcurrentSwapSafety concurrentSwapSafety = ConcurrentSwapSafety.RELIABLE;
 		private StringEncoder stringEncoder = new UTF8Encoder();
 		private BucketHasher bucketHasher = new XXHasher( seed );
 		private FingerprintHasher fpHasher = new FixedHasher();
 
 		/**
-		 * Instantiate a NanoCuckooFilter.Builder with the given bucket count. If the given bucket count is not a power
-		 * of 2, it will be scaled up. Resulting max capacity will be bucket count multiplied by entries per bucket.
-		 *
-		 * @param bucketCount Desired filter bucket count.
+		 * <p>
+		 * Instantiate a NanoCuckooFilter.Builder with the given capacity.
+		 * </p>
+		 * <p>
+		 * The number of internal buckets will be (capacity / entries per bucket), scaled up to a power of 2.
+		 * </p>
+		 * 
+		 * @param capacity
+		 *            Desired filter capacity.
 		 */
-		public Builder( long bucketCount ) {
+		public Builder( long capacity ) {
 
-			if ( bucketCount <= 0 ) {
-				throw new IllegalArgumentException( "Bucket count must be positive" );
+			if ( capacity <= 0 ) {
+				throw new IllegalArgumentException( "Bucket Count must be positive" );
 			}
 
-			this.capacity = bucketCount;
+			this.capacity = capacity;
 		}
 
 		/**
+		 * <p>
 		 * Build the filter using provided parameters. Will return null if sun.misc.Unsafe couldn't be obtained.
+		 * </p>
 		 *
 		 * @return NanoCuckooFilter, or null.
 		 */
 		public NanoCuckooFilter build() {
 
 			try {
-				return new NanoCuckooFilter( entriesPerBucket, capacity, expansionEnabled, maxEntriesPerBucket, fpBits, maxKicks, seed,
-						bucketHasher, fpHasher, concurrency, countingEnabled, smartInsertLoadFactor, stringEncoder );
+				return new NanoCuckooFilter( entriesPerBucket, capacity, fpBits, maxKicks, seed, bucketHasher, fpHasher,
+						concurrency, countingEnabled, smartInsertLoadFactor, stringEncoder, concurrentSwapSafety );
 			} catch ( NoSuchFieldException | IllegalAccessException e ) {
 				// Failed trying to obtain Unsafe. Shouldn't happen, return null if it does.
 			}
@@ -564,10 +588,18 @@ public class NanoCuckooFilter {
 		}
 
 		/**
+		 * <p>
 		 * Set entries per bucket.
+		 * </p>
+		 * <p>
+		 * Impacts load factor and FPP.
+		 * </p>
+		 * <p>
 		 * Must be a power of 2. Defaults to 4.
+		 * </p>
 		 *
-		 * @param entriesPerBucket Entries per bucket.
+		 * @param entriesPerBucket
+		 *            Entries per bucket.
 		 * @return Updated Builder
 		 */
 		public Builder withEntriesPerBucket( int entriesPerBucket ) {
@@ -581,11 +613,43 @@ public class NanoCuckooFilter {
 		}
 
 		/**
-		 * Set SMART insert load factor.
-		 * This is the maximum load factor to use for FAST inserts before switching to NORMAL.
-		 * Must be between 0 and 1. Defaults to 0.90 (90%).
+		 * <p>
+		 * Set concurrent swap safety.
+		 * </p>
+		 * <p>
+		 * The ConcurrentSwapSafety enum describes the levels available.
+		 * </p>
+		 * <p>
+		 * Defaults to ConcurrentSwapSafety.RELIABLE.
+		 * </p>
 		 *
-		 * @param smartInsertLoadFactor SMART insert load factor.
+		 * @param concurrentSwapSafety
+		 *            Concurrent swap safety.
+		 * @return Updated Builder
+		 */
+		public Builder withConcurrentSwapSafety( ConcurrentSwapSafety concurrentSwapSafety ) {
+
+			if ( concurrentSwapSafety == null ) {
+				throw new IllegalArgumentException( "Concurrent Swap Safety must not be null" );
+			}
+
+			this.concurrentSwapSafety = concurrentSwapSafety;
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * Set SMART insert load factor.
+		 * </p>
+		 * <p>
+		 * This is the maximum load factor to use for FAST inserts before switching to RELIABLE.
+		 * </p>
+		 * <p>
+		 * Must be between 0 and 1. Defaults to 0.90 (90%).
+		 * </p>
+		 *
+		 * @param smartInsertLoadFactor
+		 *            SMART insert load factor.
 		 * @return Updated Builder
 		 */
 		public Builder withSmartInsertLoadFactor( double smartInsertLoadFactor ) {
@@ -599,43 +663,18 @@ public class NanoCuckooFilter {
 		}
 
 		/**
-		 * Set expansion enabled. If expansion is enabled, entries per bucket will double up to MaxEntriesPerBucket when
-		 * max load is hit. This will also roughly double the FPP. Defaults to false.
-		 *
-		 * @param expansionEnabled Expansion enabled.
-		 * @return Updated Builder
-		 */
-		public Builder withExpansionEnabled( boolean expansionEnabled ) {
-
-			this.expansionEnabled = expansionEnabled;
-			return this;
-		}
-
-		/**
-		 * Set max entries per bucket.
-		 * If expansion is enabled, entries per bucket will double up to MaxEntriesPerBucket when max load is hit.
-		 * This will also roughly double the FPP.
-		 * Must be a power of 2. Defaults to 8.
-		 *
-		 * @param maxEntriesPerBucket Max entries per bucket.
-		 * @return Updated Builder
-		 */
-		public Builder withMaxEntriesPerBucket( int maxEntriesPerBucket ) {
-
-			if ( Integer.bitCount( maxEntriesPerBucket & POS_INT ) != 1 ) {
-				throw new IllegalArgumentException( "Maximum Entries Per Bucket must be a power of 2" );
-			}
-
-			this.maxEntriesPerBucket = maxEntriesPerBucket;
-			return this;
-		}
-
-		/**
+		 * <p>
 		 * Set fingerprint bits.
+		 * </p>
+		 * <p>
 		 * More bits means lower FPP, but also more memory used.
+		 * </p>
+		 * <p>
 		 * Must be from 1 to 32. Defaults to 8.
+		 * </p>
 		 *
-		 * @param fpBits Fingerprint bits.
+		 * @param fpBits
+		 *            Fingerprint bits.
 		 * @return Updated Builder
 		 */
 		public Builder withFingerprintBits( int fpBits ) {
@@ -649,10 +688,19 @@ public class NanoCuckooFilter {
 		}
 
 		/**
-		 * Set max kicks. Higher will result in higher load factor before insert failure, but worse insert performance
-		 * as max load is approached. Defaults to 400 (results in around 95% LF).
+		 * <p>
+		 * Set max kicks.
+		 * </p>
+		 * <p>
+		 * Higher will result in higher load factor before insert failure, but worse insert performance as max load is
+		 * approached.
+		 * </p>
+		 * <p>
+		 * Defaults to 400 (results in around 95% LF).
+		 * </p>
 		 *
-		 * @param maxKicks Max kicks.
+		 * @param maxKicks
+		 *            Max kicks.
 		 * @return Updated Builder
 		 */
 		public Builder withMaxKicks( int maxKicks ) {
@@ -666,11 +714,18 @@ public class NanoCuckooFilter {
 		}
 
 		/**
+		 * <p>
 		 * Set random seed.
+		 * </p>
+		 * <p>
 		 * Used when randomly swapping entries.
+		 * </p>
+		 * <p>
 		 * Defaults to 0x48F7E28A.
+		 * </p>
 		 *
-		 * @param seed Random seed.
+		 * @param seed
+		 *            Random seed.
 		 * @return Updated Builder
 		 */
 		public Builder withRandomSeed( int seed ) {
@@ -680,11 +735,18 @@ public class NanoCuckooFilter {
 		}
 
 		/**
+		 * <p>
 		 * Set String encoder.
+		 * </p>
+		 * <p>
 		 * Used by String insert/contains/count/delete.
+		 * </p>
+		 * <p>
 		 * Defaults to UTF8Encoder.
+		 * </p>
 		 *
-		 * @param stringEncoder String encoder.
+		 * @param stringEncoder
+		 *            String encoder.
 		 * @return Updated Builder
 		 */
 		public Builder withStringEncoder( StringEncoder stringEncoder ) {
@@ -698,10 +760,15 @@ public class NanoCuckooFilter {
 		}
 
 		/**
+		 * <p>
 		 * Set bucket hasher.
-		 * Defaults to XXHasher.
+		 * </p>
+		 * <p>
+		 * Defaults to 64-bit XXHasher with a seed of 0x48F7E28A.
+		 * </p>
 		 *
-		 * @param bucketHasher Bucket hasher.
+		 * @param bucketHasher
+		 *            Bucket hasher.
 		 * @return Updated Builder
 		 */
 		public Builder withBucketHasher( BucketHasher bucketHasher ) {
@@ -715,10 +782,15 @@ public class NanoCuckooFilter {
 		}
 
 		/**
+		 * <p>
 		 * Set fingerprint hasher.
-		 * Defaults to FixedHasher.
+		 * </p>
+		 * <p>
+		 * Defaults to 64-bit FixedHasher.
+		 * </p>
 		 *
-		 * @param fpHasher Fingerprint hasher.
+		 * @param fpHasher
+		 *            Fingerprint hasher.
 		 * @return Updated Builder
 		 */
 		public Builder withFingerprintHasher( FingerprintHasher fpHasher ) {
@@ -732,11 +804,19 @@ public class NanoCuckooFilter {
 		}
 
 		/**
-		 * Set concurrency. Recommended to set to at least the number of Threads that will be inserting/deleting at
-		 * once. A number ReentrantLocks will be allocated equal to this number. Capped by the number of buckets.
-		 * Defaults to 64.
+		 * <p>
+		 * Set concurrency.
+		 * </p>
+		 * <p>
+		 * Recommended to set to at least the number of Threads that will be inserting/deleting at once. A number
+		 * ReentrantLocks will be allocated equal to this number.
+		 * </p>
+		 * <p>
+		 * Capped by the number of buckets. Defaults to 64.
+		 * </p>
 		 *
-		 * @param concurrency Concurrency.
+		 * @param concurrency
+		 *            Concurrency.
 		 * @return Updated Builder
 		 */
 		public Builder withConcurrency( int concurrency ) {
@@ -750,13 +830,23 @@ public class NanoCuckooFilter {
 		}
 
 		/**
-		 * Set counting enabled. If counting is enabled, a single value can be inserted multiple times. Note that a
-		 * value should not be inserted more times than (entries per bucket * 2 - 1), or filter failure can occur. If
-		 * counting is disabled, it is still possible for a value to end up in the filter multiple times, but an effort
-		 * will be made to avoid it. Insert operations will return true if a duplicate is detected, as if the insert
-		 * succeeded.
-		 *
-		 * @param countingEnabled Counting enabled.
+		 * <p>
+		 * Set counting enabled.
+		 * </p>
+		 * <p>
+		 * If counting is enabled, a single value can be inserted multiple times. Note that a value should not be
+		 * inserted more times than (entries per bucket * 2 - 1), or filter failure can occur.
+		 * <p>
+		 * If counting is disabled, it is still possible for a value to end up in the filter multiple times, but an
+		 * effort will be made to avoid it. Insert operations will return true if a duplicate is detected, as if the
+		 * insert succeeded.
+		 * </p>
+		 * <p>
+		 * Defaults to false.
+		 * </p>
+		 * 
+		 * @param countingEnabled
+		 *            Counting enabled.
 		 * @return Updated Builder.
 		 */
 		public Builder withCountingEnabled( boolean countingEnabled ) {

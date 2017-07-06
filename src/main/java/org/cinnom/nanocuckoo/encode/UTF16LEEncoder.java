@@ -5,29 +5,30 @@ package org.cinnom.nanocuckoo.encode;
  */
 public class UTF16LEEncoder implements StringEncoder {
 
-    /**
-     * Encode a String into UTF-16 Little Endian bytes.
-     *
-     * @param data String to encode.
-     * @return UTF-16 Little Endian bytes.
-     */
-    @Override
-    public byte[] encode(final String data) {
+	/**
+	 * Encode a String into UTF-16 Little Endian bytes.
+	 *
+	 * @param data
+	 *            String to encode.
+	 * @return UTF-16 Little Endian bytes.
+	 */
+	@Override
+	public byte[] encode( final String data ) {
 
-        final int length = data.length();
-        final byte b[] = new byte[length * 2];
+		final int length = data.length();
+		final byte resultBytes[] = new byte[length * 2];
 
-        for (int j = 0; j < length; j++) {
+		for ( int j = 0; j < length; j++ ) {
 
-            int offset = j << 1;
-            int nextOffset = offset + 1;
-            char charAtJ = data.charAt(j);
+			int offset = j << 1;
+			int nextOffset = offset + 1;
+			char charAtJ = data.charAt( j );
 
-            b[offset] = (byte) (charAtJ & 0xFF);
-            b[nextOffset] = (byte) (charAtJ >> 8);
-        }
+			resultBytes[offset] = (byte) ( charAtJ & 0xFF );
+			resultBytes[nextOffset] = (byte) ( charAtJ >> 8 );
+		}
 
-        return b;
-    }
+		return resultBytes;
+	}
 
 }

@@ -3,17 +3,19 @@ package org.cinnom.nanocuckoo.hash;
 import net.jpountz.xxhash.XXHashFactory;
 
 /**
- * XXHash bucket hasher. Fast.
+ * XXHash 64-bit bucket hasher. Very fast (non-cryptographic) hash with a good distribution.
  */
 public class XXHasher implements BucketHasher {
 
 	private final XXHashFactory factory = XXHashFactory.fastestInstance();
 
-	private int seed;
+	private final int seed;
 
 	/**
 	 * Instantiate the XXHasher with the given random seed.
-	 * @param seed Random seed.
+	 * 
+	 * @param seed
+	 *            Random seed.
 	 */
 	public XXHasher( int seed ) {
 
@@ -22,7 +24,9 @@ public class XXHasher implements BucketHasher {
 
 	/**
 	 * Get 64-bit bucket hash using XXHash.
-	 * @param data Data to hash.
+	 * 
+	 * @param data
+	 *            Data to hash.
 	 * @return 64-bit hash.
 	 */
 	@Override

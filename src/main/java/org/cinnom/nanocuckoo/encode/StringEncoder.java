@@ -5,10 +5,12 @@ package org.cinnom.nanocuckoo.encode;
  */
 public interface StringEncoder {
 
-    /**
-     * Encodes a String into a byte array.
-     * @param data String to encode.
-     * @return Byte array.
-     */
-    byte[] encode(final String data);
+	/**
+	 * Encodes a String into a byte array.
+	 * 
+	 * @param data
+	 *            String to encode.
+	 * @return Byte array.
+	 */
+	byte[] encode( final String data );
 }

@@ -1,163 +1,166 @@
 package org.cinnom.nanocuckoo;
 
 /**
- * UnsafeBuckets type to be used when fingerprints are not 8, 16, or 32 bits. Performs a bunch of shifting and masking to quickly and efficiently store fingerprints in 32-bit windows.
+ * UnsafeBuckets type to be used when fingerprints are not 8, 16, or 32 bits. Performs a bunch of shifting and masking
+ * to quickly and efficiently store fingerprints in 32-bit windows. Will be a bit slower compared to other buckets types
+ * due to extra operations.
  */
 final class VariableUnsafeBuckets extends UnsafeBuckets {
 
-    private static final int BITS_PER_INT = 32;
-    private static final int DIV_32 = 5;
-    private static final int BYTES_PER_INT = 4;
-    private static final int MULTI_4 = 2;
-    private static final int MOD_32_MASK = 0x0000001F;
+	private static final int BITS_PER_INT = 32;
+	private static final int DIV_32 = 5;
+	private static final int BYTES_PER_INT = 4;
+	private static final int MULTI_4 = 2;
+	private static final int MOD_32_MASK = 0x0000001F;
 
-    private final int initClearMask;
+	private final int initClearMask;
 
-    VariableUnsafeBuckets(int entries, long capacity, int maxEntries, int fpBits, boolean countingDisabled)
-            throws NoSuchFieldException, IllegalAccessException {
+	VariableUnsafeBuckets( int entries, long bucketCount, int fpBits, boolean countingDisabled )
+			throws NoSuchFieldException, IllegalAccessException {
 
-        super(entries, capacity, maxEntries, fpBits, countingDisabled);
+		super( entries, bucketCount, fpBits, countingDisabled );
 
-        int shift = BITS_PER_INT - fpBits;
-        initClearMask = (-1 >>> shift) << shift;
-    }
+		int shift = BITS_PER_INT - fpBits;
+		initClearMask = ( -1 >>> shift ) << shift;
+	}
 
-    // swap gets a special implementation here for more efficiency
-    @Override
-    int swap(int entry, long bucket, int value) {
+	// swap gets a special implementation here for more efficiency
+	@Override
+	int swap( int entry, long bucket, int value ) {
 
-        long bucketBits = bucket * fpBits;
+		long bucketBits = bucket * fpBits;
 
-        long bucketByte = addresses[entry] + (bucketBits >>> DIV_32 << MULTI_4);
-        int startBit = ((int) (bucketBits)) & MOD_32_MASK;
+		long bucketByte = addresses[entry] + ( bucketBits >>> DIV_32 << MULTI_4 );
+		int startBit = ( (int) ( bucketBits ) ) & MOD_32_MASK;
 
-        int clearMask = initClearMask >>> startBit;
+		int clearMask = initClearMask >>> startBit;
 
-        int shift = BITS_PER_INT - (startBit + fpBits);
+		int shift = BITS_PER_INT - ( startBit + fpBits );
 
-        int getInt = unsafe.getIntVolatile(null, bucketByte);
-        int putValue = value;
+		int getInt = unsafe.getIntVolatile( null, bucketByte );
+		int putValue = value;
 
-        getInt &= clearMask;
+		getInt &= clearMask;
 
-        startBit = 0;
-        if (shift > 0) {
-            getInt >>>= shift;
-            putValue = value << shift;
-        } else if (shift < 0) {
-            startBit = -shift;
-            getInt <<= startBit;
-            putValue = value >>> startBit;
-        }
+		startBit = 0;
+		if ( shift > 0 ) {
+			getInt >>>= shift;
+			putValue = value << shift;
+		} else if ( shift < 0 ) {
+			startBit = -shift;
+			getInt <<= startBit;
+			putValue = value >>> startBit;
+		}
 
-        clearMask = ~clearMask;
+		clearMask = ~clearMask;
 
-        int originalInt;
-        int putInt;
-        do {
-            originalInt = unsafe.getIntVolatile(null, bucketByte);
+		int originalInt;
+		int putInt;
+		do {
+			originalInt = unsafe.getIntVolatile( null, bucketByte );
 
-            putInt = (originalInt & clearMask) | putValue;
+			putInt = ( originalInt & clearMask ) | putValue;
 
-        } while (!unsafe.compareAndSwapInt(null, bucketByte, originalInt, putInt));
+			// compareAndSwap loop is necessary since adjacent buckets could be concurrently modified
+		} while ( !unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ) );
 
-        if (startBit > 0) {
+		if ( startBit > 0 ) {
 
-            bucketByte += BYTES_PER_INT;
+			bucketByte += BYTES_PER_INT;
 
-            shift = BITS_PER_INT - startBit;
+			shift = BITS_PER_INT - startBit;
 
-            clearMask = -1 >>> startBit;
+			clearMask = -1 >>> startBit;
 
-            putValue = value << shift;
+			putValue = value << shift;
 
-            do {
-                originalInt = unsafe.getIntVolatile(null, bucketByte);
+			do {
+				originalInt = unsafe.getIntVolatile( null, bucketByte );
 
-                putInt = (originalInt & clearMask) | putValue;
+				putInt = ( originalInt & clearMask ) | putValue;
 
-            } while (!unsafe.compareAndSwapInt(null, bucketByte, originalInt, putInt));
+			} while ( !unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ) );
 
-            getInt |= originalInt >>> shift;
-        }
+			getInt |= originalInt >>> shift;
+		}
 
-        return getInt;
-    }
+		return getInt;
+	}
 
-    @Override
-    int getValue(int entry, long bucket) {
+	@Override
+	int getValue( int entry, long bucket ) {
 
-        long bucketBits = bucket * fpBits;
+		long bucketBits = bucket * fpBits;
 
-        long bucketByte = addresses[entry] + (bucketBits >>> DIV_32 << MULTI_4);
-        int startBit = ((int) (bucketBits)) & MOD_32_MASK;
+		long bucketByte = addresses[entry] + ( bucketBits >>> DIV_32 << MULTI_4 );
+		int startBit = ( (int) ( bucketBits ) ) & MOD_32_MASK;
 
-        int clearMask = initClearMask >>> startBit;
+		int clearMask = initClearMask >>> startBit;
 
-        int shift = BITS_PER_INT - (startBit + fpBits);
+		int shift = BITS_PER_INT - ( startBit + fpBits );
 
-        int getInt = unsafe.getIntVolatile(null, bucketByte);
+		int getInt = unsafe.getIntVolatile( null, bucketByte );
 
-        getInt &= clearMask;
+		getInt &= clearMask;
 
-        startBit = 0;
+		startBit = 0;
 
-        getInt = shift > 0 ? getInt >>> shift : getInt;
-        getInt = shift < 0 ? getInt << (startBit = -shift) : getInt;
+		getInt = shift > 0 ? getInt >>> shift : getInt;
+		getInt = shift < 0 ? getInt << ( startBit = -shift ) : getInt;
 
-        if (startBit > 0) {
+		if ( startBit > 0 ) {
 
-            int getInt2 = unsafe.getIntVolatile(null, bucketByte + BYTES_PER_INT);
+			int getInt2 = unsafe.getIntVolatile( null, bucketByte + BYTES_PER_INT );
 
-            getInt2 >>>= (BITS_PER_INT - startBit);
+			getInt2 >>>= ( BITS_PER_INT - startBit );
 
-            getInt |= getInt2;
-        }
+			getInt |= getInt2;
+		}
 
-        return getInt;
-    }
+		return getInt;
+	}
 
-    @Override
-    void putValue(int entry, long bucket, int value) {
+	@Override
+	void putValue( int entry, long bucket, int value ) {
 
-        long bucketBits = bucket * fpBits;
+		long bucketBits = bucket * fpBits;
 
-        long bucketByte = addresses[entry] + (bucketBits >>> DIV_32 << MULTI_4);
-        int startBit = ((int) (bucketBits)) & MOD_32_MASK;
+		long bucketByte = addresses[entry] + ( bucketBits >>> DIV_32 << MULTI_4 );
+		int startBit = ( (int) ( bucketBits ) ) & MOD_32_MASK;
 
-        int clearMask = ~(initClearMask >>> startBit);
+		int clearMask = ~( initClearMask >>> startBit );
 
-        int leftShift = BITS_PER_INT - (startBit + fpBits);
+		int leftShift = BITS_PER_INT - ( startBit + fpBits );
 
-        startBit = 0;
+		startBit = 0;
 
-        int putValue = leftShift > 0 ? value << leftShift : value;
-        putValue = leftShift < 0 ? value >>> (startBit = -leftShift) : putValue;
+		int putValue = leftShift > 0 ? value << leftShift : value;
+		putValue = leftShift < 0 ? value >>> ( startBit = -leftShift ) : putValue;
 
-        int originalInt;
-        int putInt;
-        do {
-            originalInt = unsafe.getIntVolatile(null, bucketByte);
+		int originalInt;
+		int putInt;
+		do {
+			originalInt = unsafe.getIntVolatile( null, bucketByte );
 
-            putInt = (originalInt & clearMask) | putValue;
+			putInt = ( originalInt & clearMask ) | putValue;
 
-        } while (!unsafe.compareAndSwapInt(null, bucketByte, originalInt, putInt));
+		} while ( !unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ) );
 
-        if (startBit > 0) {
+		if ( startBit > 0 ) {
 
-            clearMask = -1 >>> startBit;
+			clearMask = -1 >>> startBit;
 
-            putValue = value << (BITS_PER_INT - startBit);
+			putValue = value << ( BITS_PER_INT - startBit );
 
-            bucketByte += BYTES_PER_INT;
+			bucketByte += BYTES_PER_INT;
 
-            do {
-                originalInt = unsafe.getIntVolatile(null, bucketByte);
+			do {
+				originalInt = unsafe.getIntVolatile( null, bucketByte );
 
-                putInt = (originalInt & clearMask) | putValue;
+				putInt = ( originalInt & clearMask ) | putValue;
 
-            } while (!unsafe.compareAndSwapInt(null, bucketByte, originalInt, putInt));
-        }
-    }
+			} while ( !unsafe.compareAndSwapInt( null, bucketByte, originalInt, putInt ) );
+		}
+	}
 
 }

@@ -1,136 +1,135 @@
 package org.cinnom.nanocuckoo;
 
-import org.junit.Test;
-
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.cinnom.nanocuckoo.encode.ASCIIEncoder;
+import org.junit.Test;
 
 /**
  * Created by rjones on 6/26/17.
  */
 public class NanoCuckooFilterTest {
 
-    @Test
-    public void insertTest() throws InterruptedException {
+	@Test
+	public void insertTest() throws InterruptedException {
 
-        final int threads = 16;
-        int capacity = 10000000;
+		final int threads = 16;
+		int capacity = 10000000;
 
-        NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder(capacity).withCountingEnabled(false).withFingerprintBits(9).build();
+		NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity )
+				.withConcurrentSwapSafety( ConcurrentSwapSafety.FAST )
+				.withFingerprintBits( 6 )
+				.build();
 
-        long fullCapacity = cuckooFilter.getCapacity();
+		System.out.println( cuckooFilter.getMemoryUsageBytes() );
+		System.out.println( cuckooFilter.getCapacity() );
 
-        long runs = 2 * fullCapacity;
+		final AtomicInteger actualRunsA = new AtomicInteger();
+		final AtomicInteger runningThreads = new AtomicInteger( threads );
 
-        System.out.println(cuckooFilter.getMemoryUsageBytes());
-        System.out.println(cuckooFilter.getCapacity());
+		long currentMillis1 = System.currentTimeMillis();
 
-        final AtomicInteger actualRunsA = new AtomicInteger();
-        final AtomicInteger runningThreads = new AtomicInteger(threads);
+		for ( int th = 0; th < threads; th++ ) {
+			Runnable t = () -> {
 
-        long currentMillis1 = System.currentTimeMillis();
+				while ( true ) {
 
-        for (int th = 0; th < threads; th++) {
-            Runnable t = () -> {
+					int i = actualRunsA.getAndIncrement();
+					String s = i + "abcdefghijklmn-opqrstuvwxyz-000000";
 
-                while (true) {
+					if ( !cuckooFilter.insert( s ) ) {
+						System.out.println( "Insert failed at: " + i );
+						break;
+					}
+				}
 
-                    int i = actualRunsA.getAndIncrement();
-                    String s = i + "abcdefghijklmn-opqrstuvwxyz-000000";
+				runningThreads.decrementAndGet();
+			};
 
-                    if (!cuckooFilter.insert(s, InsertSafety.SMART)) {
-                        System.out.println("Insert failed at: " + i);
-                        break;
-                    }
-                }
+			new Thread( t ).start();
+		}
 
-                runningThreads.decrementAndGet();
-            };
+		while ( runningThreads.get() != 0 ) {
+			Thread.sleep( 1 );
+		}
 
-            new Thread(t).start();
-        }
+		long currentMillis2 = System.currentTimeMillis();
 
-        while (runningThreads.get() != 0) {
-            Thread.sleep(1);
-        }
+		final int actualRuns = actualRunsA.getAndSet( 0 );
 
-        long currentMillis2 = System.currentTimeMillis();
+		System.out.println( "Insert ops/sec: " + ( actualRuns / ( ( currentMillis2 - currentMillis1 ) / 1000 ) ) );
 
-        final int actualRuns = actualRunsA.getAndSet(0);
+		System.out.println( "LF: " + cuckooFilter.getLoadFactor() );
 
-        System.out.println("Insert ops/sec: " + (actualRuns / ((currentMillis2 - currentMillis1) / 1000)));
+		runningThreads.set( threads );
 
-        System.out.println(
-                "LF: " + cuckooFilter.getLoadFactor());
+		for ( int th = 0; th < threads; th++ ) {
+			Runnable t = () -> {
 
-        runningThreads.set(threads);
+				while ( true ) {
 
-        for (int th = 0; th < threads; th++) {
-            Runnable t = () -> {
+					int i = actualRunsA.getAndIncrement();
+					String s = i + "abcdefghijklmn-opqrstuvwxyz-000000";
 
-                while (true) {
+					if ( !cuckooFilter.contains( s ) ) {
+						System.out.println( "Contains failed at: " + i );
+						break;
+					}
+				}
 
-                    int i = actualRunsA.getAndIncrement();
-                    String s = i + "abcdefghijklmn-opqrstuvwxyz-000000";
+				runningThreads.decrementAndGet();
+			};
 
-                    if (!cuckooFilter.contains(s)) {
-                        System.out.println("Contains failed at: " + i);
-                        break;
-                    }
-                }
+			new Thread( t ).start();
+		}
 
-                runningThreads.decrementAndGet();
-            };
+		while ( runningThreads.get() != 0 ) {
+			Thread.sleep( 1 );
+		}
 
-            new Thread(t).start();
-        }
+		long currentMillis3 = System.currentTimeMillis();
+		System.out.println(
+				"Contains (true) ops/sec: " + ( actualRuns / ( ( currentMillis3 - currentMillis2 ) / 1000 ) ) );
 
-        while (runningThreads.get() != 0) {
-            Thread.sleep(1);
-        }
+		final AtomicInteger falsePos = new AtomicInteger();
 
-        long currentMillis3 = System.currentTimeMillis();
-        System.out.println(
-                "Contains (true) ops/sec: " + (actualRuns / ((currentMillis3 - currentMillis2) / 1000)));
+		actualRunsA.getAndSet( 0 );
+		runningThreads.set( threads );
 
-        final AtomicInteger falsePos = new AtomicInteger();
+		for ( int th = 0; th < threads; th++ ) {
+			Runnable t = () -> {
 
-        actualRunsA.getAndSet(0);
-        runningThreads.set(threads);
+				while ( true ) {
 
-        for (int th = 0; th < threads; th++) {
-            Runnable t = () -> {
+					int i = actualRunsA.getAndIncrement();
 
-                while (true) {
+					if ( i >= actualRuns ) {
+						break;
+					}
 
-                    int i = actualRunsA.getAndIncrement();
+					String s = i + "1abcdefghijklm1";
 
-                    if (i >= actualRuns) {
-                        break;
-                    }
+					if ( cuckooFilter.contains( s ) ) {
+						falsePos.incrementAndGet();
+					}
+				}
 
-                    String s = i + "1abcdefghijklm1";
+				runningThreads.decrementAndGet();
+			};
 
-                    if (cuckooFilter.contains(s)) {
-                        falsePos.incrementAndGet();
-                    }
-                }
+			new Thread( t ).start();
+		}
 
-                runningThreads.decrementAndGet();
-            };
+		while ( runningThreads.get() != 0 ) {
+			Thread.sleep( 1 );
+		}
 
-            new Thread(t).start();
-        }
+		long currentMillis4 = System.currentTimeMillis();
+		System.out.println(
+				"Contains (false) ops/sec: " + ( actualRuns / ( ( currentMillis4 - currentMillis3 ) / 1000 ) ) );
 
-        while (runningThreads.get() != 0) {
-            Thread.sleep(1);
-        }
+		System.out.println( "FPP: " + (double) falsePos.get() / (double) actualRuns );
 
-        long currentMillis4 = System.currentTimeMillis();
-        System.out.println(
-                "Contains (false) ops/sec: " + (actualRuns / ((currentMillis4 - currentMillis3) / 1000)));
-
-        System.out.println("FPP: " + (double) falsePos.get() / (double) actualRuns);
-
-    }
+	}
 
 }

@@ -7,13 +7,13 @@ import org.junit.Test;
  */
 public class VariableUnsafeBucketsTest {
 
-    @Test
-    public void test() {
+	@Test
+	public void test() {
 
-        for (short b = 0; b < 128; b++) {
-            char c = (char) b;
-            System.out.println(b + ": " + c);
-        }
-    }
+		for ( short b = 0; b < 128; b++ ) {
+			char c = (char) b;
+			System.out.println( b + ": " + c );
+		}
+	}
 
 }
