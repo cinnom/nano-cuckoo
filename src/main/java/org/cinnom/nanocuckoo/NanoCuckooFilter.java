@@ -589,10 +589,10 @@ public class NanoCuckooFilter {
 
 		/**
 		 * <p>
-		 * Set entries per bucket.
+		 * Set entries per bucket (AKA bucket size).
 		 * </p>
 		 * <p>
-		 * Impacts load factor and FPP.
+		 * Higher entries per bucket will give higher load factors, but also increases FPP.
 		 * </p>
 		 * <p>
 		 * Must be a power of 2. Defaults to 4.
@@ -617,7 +617,7 @@ public class NanoCuckooFilter {
 		 * Set concurrent swap safety.
 		 * </p>
 		 * <p>
-		 * The ConcurrentSwapSafety enum describes the levels available.
+		 * The {@link ConcurrentSwapSafety} enum describes the levels available.
 		 * </p>
 		 * <p>
 		 * Defaults to ConcurrentSwapSafety.RELIABLE.

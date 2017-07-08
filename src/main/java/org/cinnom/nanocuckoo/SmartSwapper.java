@@ -5,7 +5,7 @@ import org.cinnom.nanocuckoo.hash.FingerprintHasher;
 /**
  * "Smart" bucket swapper. Uses FastSwapper until a specified load factor is hit, then uses ReliableSwapper.
  */
-public class SmartSwapper implements Swapper {
+class SmartSwapper implements Swapper {
 
 	private final FastSwapper fastSwapper;
 	private final ReliableSwapper reliableSwapper;

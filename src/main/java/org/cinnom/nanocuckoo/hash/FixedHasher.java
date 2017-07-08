@@ -9,7 +9,7 @@ public final class FixedHasher implements FingerprintHasher {
 	private static final long MURMUR_HASH_MIX = 0xC4CEB9FE1A85EC53L;
 
 	/**
-	 * "Hash" a fingerprint by multiplying it by 0xC4CEB9fE1A85EC53L.
+	 * "Hash" a fingerprint by multiplying it by 0xC4CEB9FE1A85EC53L.
 	 * 
 	 * @param value
 	 *            Value to hash.
