@@ -40,9 +40,9 @@ class KickedValues implements Serializable {
 		this.kickedFingerprint.set( kickedFingerprint );
 	}
 
-	boolean compareAndSetKickedFingerprint( int expected, int kickedFingerprint ) {
+	boolean compareAndSetKickedFingerprint( int kickedFingerprint ) {
 
-		return this.kickedFingerprint.compareAndSet( expected, kickedFingerprint );
+		return this.kickedFingerprint.compareAndSet( -1, kickedFingerprint );
 	}
 
 	long getKickedBucket() {

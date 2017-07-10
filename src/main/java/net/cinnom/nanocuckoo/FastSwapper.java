@@ -78,7 +78,7 @@ class FastSwapper implements Swapper, Serializable {
 				}
 			}
 
-			if ( kickedValues.compareAndSetKickedFingerprint( -1, fingerprint ) ) {
+			if ( kickedValues.compareAndSetKickedFingerprint( fingerprint ) ) {
 				kickedValues.setKickedBucket( bucket );
 				buckets.incrementInsertedCount(); // increase count when kicked value set
 				return true;

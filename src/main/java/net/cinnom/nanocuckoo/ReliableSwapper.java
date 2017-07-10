@@ -55,7 +55,7 @@ class ReliableSwapper implements Swapper, Serializable {
 		try {
 			kickedValues.lock();
 
-			if ( kickedValues.compareAndSetKickedFingerprint( -1, fingerprint ) ) {
+			if ( kickedValues.compareAndSetKickedFingerprint( fingerprint ) ) {
 
 				kickedValues.setKickedBucket( bucket );
 
