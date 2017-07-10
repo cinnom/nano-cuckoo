@@ -101,7 +101,7 @@ public class CuckooTest {
 
 Configuration
 =====
-See [NanoCuckooFilter.Builder](https://cinnom.github.io/nano-cuckoo/index.html?com/cinnom/nanocuckoo/NanoCuckooFilter.Builder.html) documentation for various settings.
+See [NanoCuckooFilter.Builder](https://cinnom.github.io/nano-cuckoo/index.html?net/cinnom/nanocuckoo/NanoCuckooFilter.Builder.html) documentation for various settings.
 
 Type Support
 =====
