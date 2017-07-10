@@ -1,3 +1,3 @@
-org.cinnom.nanocuckoo
-org.cinnom.nanocuckoo.encode
-org.cinnom.nanocuckoo.hash
+net.cinnom.nanocuckoo
+net.cinnom.nanocuckoo.encode
+net.cinnom.nanocuckoo.hash
