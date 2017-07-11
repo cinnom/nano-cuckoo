@@ -71,7 +71,7 @@ abstract class UnsafeBuckets implements Serializable {
 		entryMask = this.entries - 1;
 
 		long capacityBytes = ( realCapacity >>> DIV_8 ) * fpBits;
-		if ( ( capacityBytes & MOD_8_MASK ) > 0 ) {
+		if ( ( realCapacity & MOD_8_MASK ) > 0 ) {
 			capacityBytes++;
 		}
 
