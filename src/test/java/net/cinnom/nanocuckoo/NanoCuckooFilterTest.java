@@ -15,7 +15,10 @@
  */
 package net.cinnom.nanocuckoo;
 
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.Assert;
@@ -181,5 +184,30 @@ public class NanoCuckooFilterTest {
 				kickedValues, unsafeBuckets, bucketLocker, swapper );
 
 		Assert.assertEquals( (double) insertedCount / capacity, cuckooFilter.getLoadFactor(), 0.000001 );
+	}
+
+	@Test
+	public void deleteKickedTest() {
+
+		BucketHasher bucketHasher = mock( BucketHasher.class );
+		FingerprintHasher fingerprintHasher = mock( FingerprintHasher.class );
+		StringEncoder stringEncoder = mock( StringEncoder.class );
+		KickedValues kickedValues = mock( KickedValues.class );
+		UnsafeBuckets unsafeBuckets = mock( UnsafeBuckets.class );
+		BucketLocker bucketLocker = mock( BucketLocker.class );
+		Swapper swapper = mock( Swapper.class );
+
+		when( unsafeBuckets.getBucket( anyLong() ) ).thenReturn( 1L );
+		when( fingerprintHasher.getHash( anyInt() ) ).thenReturn( 1L );
+		when( unsafeBuckets.delete( anyLong(), anyInt() ) ).thenReturn( false );
+		when( kickedValues.equals( anyInt(), anyLong(), anyLong() ) ).thenReturn( true );
+		when( kickedValues.isClear() ).thenReturn( true );
+
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( 8, bucketHasher, fingerprintHasher, stringEncoder,
+				kickedValues, unsafeBuckets, bucketLocker, swapper );
+
+		cuckooFilter.delete( 1 );
+
+		verify( kickedValues ).clear();
 	}
 }
