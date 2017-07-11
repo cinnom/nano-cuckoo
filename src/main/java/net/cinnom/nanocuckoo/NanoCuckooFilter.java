@@ -462,12 +462,20 @@ public class NanoCuckooFilter implements Serializable {
 
 		if ( !kickedValues.isClear() ) {
 
-			int kickedFingerprint = kickedValues.getKickedFingerprint();
-			long kickedBucket = kickedValues.getKickedBucket();
-			kickedValues.clear();
-			buckets.decrementInsertedCount();
+			// Slight performance improvement for concurrent deletes - only lock if we need to
+			kickedValues.lock();
 
-			insertFingerprint( kickedFingerprint, kickedBucket );
+			if ( !kickedValues.isClear() ) {
+
+				int kickedFingerprint = kickedValues.getKickedFingerprint();
+				long kickedBucket = kickedValues.getKickedBucket();
+				kickedValues.clear();
+				buckets.decrementInsertedCount();
+
+				insertFingerprint( kickedFingerprint, kickedBucket );
+			}
+
+			kickedValues.unlock();
 		}
 	}
 
