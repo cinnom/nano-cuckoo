@@ -24,6 +24,9 @@ import java.io.ObjectOutputStream;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Serialization test. This is really an integration test, but it runs quickly enough to be a unit test.
+ */
 public class SerializationTest {
 
 	@Test

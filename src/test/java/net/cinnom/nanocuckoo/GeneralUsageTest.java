@@ -18,6 +18,9 @@ package net.cinnom.nanocuckoo;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * General usage test. This is really an integration test, but it runs quickly enough to be a unit test.
+ */
 public class GeneralUsageTest {
 
 	@Test

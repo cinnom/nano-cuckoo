@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.cinnom.nanocuckoo;
+package net.cinnom.nanocuckoo.concurrency;
 
 import java.io.IOException;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import net.cinnom.nanocuckoo.ConcurrentSwapSafety;
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
 import org.junit.Test;
 
 /**
@@ -27,14 +29,14 @@ import org.junit.Test;
 public class PerformanceIT {
 
 	@Test
-	public void insertTest() throws InterruptedException, IOException, ClassNotFoundException {
+	public void perfTest() throws InterruptedException, IOException, ClassNotFoundException {
 
 		final int threads = 6;
-		final int capacity = 10000000;
+		final int capacity = 10_000_000;
 		final String containedString = "abcdefghijklmn-opqrstuvwxyz-000000";
 		final String notContainedString = "abcdefghijklmn-opqrstuvwxyz-111111";
 
-		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity )
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withCountingEnabled( true )
 				.withConcurrentSwapSafety( ConcurrentSwapSafety.SMART ).withFingerprintBits( 7 ).build();
 
 		System.out.println( "Memory usage bytes: " + cuckooFilter.getMemoryUsageBytes() );
@@ -43,8 +45,8 @@ public class PerformanceIT {
 		final AtomicInteger currentRun = new AtomicInteger();
 
 		// Set phasers to stun
-		Phaser startRunning = new Phaser( 1 + threads );
-		Phaser stopRunning = new Phaser( 1 + threads );
+		final Phaser startRunning = new Phaser( 1 + threads );
+		final Phaser stopRunning = new Phaser( 1 + threads );
 
 		for ( int th = 0; th < threads; th++ ) {
 			Runnable t = () -> {
@@ -154,6 +156,37 @@ public class PerformanceIT {
 		System.out.println( "Contains (false) ops/sec: " + ( actualRuns / timeNanos ) );
 		System.out.println( "FPP: " + (double) falsePos.get() / (double) actualRuns );
 
+		currentRun.set( 0 );
+
+		for ( int th = 0; th < threads; th++ ) {
+			Runnable t = () -> {
+
+				startRunning.arriveAndAwaitAdvance();
+
+				while ( true ) {
+
+					int i = currentRun.getAndIncrement();
+					String s = i + containedString;
+
+					if ( !cuckooFilter.delete( s ) ) {
+						System.out.println( "Delete failed at: " + i );
+						break;
+					}
+				}
+
+				stopRunning.arrive();
+			};
+
+			new Thread( t ).start();
+		}
+
+		startRunning.arriveAndAwaitAdvance();
+		startNanos = System.nanoTime();
+		stopRunning.arriveAndAwaitAdvance();
+
+		timeNanos = Math.max( ( System.nanoTime() - startNanos ) / 1_000_000_000, 1 );
+
+		System.out.println( "Delete ops/sec: " + ( actualRuns / timeNanos ) );
 	}
 
 }
