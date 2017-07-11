@@ -82,4 +82,34 @@ public class GeneralUsageTest {
 		cuckooFilter.close();
 	}
 
+	@Test
+	public void multiInsertDeleteCountTest() {
+
+		long capacity = 32;
+
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
+				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
+
+		for ( int i = 0; i < 9; i++ ) {
+			cuckooFilter.insert( 1 );
+		}
+
+		Assert.assertEquals( 9, cuckooFilter.delete( 1, 9 ) );
+	}
+
+	@Test
+	public void multiInsertDeleteTest() {
+
+		long capacity = 32;
+
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
+				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
+
+		for ( int i = 0; i < 9; i++ ) {
+			Assert.assertTrue( cuckooFilter.insert( 1 ) );
+		}
+		for ( int i = 0; i < 9; i++ ) {
+			Assert.assertTrue( cuckooFilter.delete( 1 ) );
+		}
+	}
 }

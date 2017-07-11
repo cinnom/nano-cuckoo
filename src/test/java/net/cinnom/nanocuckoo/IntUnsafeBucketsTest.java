@@ -43,4 +43,29 @@ public class IntUnsafeBucketsTest {
 
 		intUnsafeBuckets.close();
 	}
+
+	@Test
+	public void swapTest() {
+
+		final int entries = 4;
+		final long buckets = 32;
+		final boolean counting = false;
+
+		for(int fp = 1; fp <= 32; fp++) {
+
+			final IntUnsafeBuckets intUnsafeBuckets = new IntUnsafeBuckets( entries, buckets, counting );
+
+			for ( int e = 0; e < entries; e++ ) {
+				for ( int b = 0; b < buckets; b++ ) {
+
+					int fpMask = -1 >>> (32 - fp);
+					int value = ( 1023 + e * b ) & fpMask;
+					int swapValue = (value + 999) & fpMask;
+					intUnsafeBuckets.putValue( e, b, value );
+					Assert.assertEquals( value, intUnsafeBuckets.swap( e, b, swapValue ) );
+					Assert.assertEquals( swapValue, intUnsafeBuckets.getValue( e, b ) );
+				}
+			}
+		}
+	}
 }

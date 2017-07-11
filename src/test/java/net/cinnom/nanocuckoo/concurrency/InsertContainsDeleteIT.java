@@ -39,7 +39,7 @@ public class InsertContainsDeleteIT {
 		final String containedString = "abcdefghijklmn-opqrstuvwxyz-000000";
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withCountingEnabled( true )
-				.withConcurrentSwapSafety( ConcurrentSwapSafety.SMART ).withFingerprintBits( 7 ).build();
+				.withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).withFingerprintBits( 7 ).build();
 
 		final AtomicInteger currentRun = new AtomicInteger();
 
