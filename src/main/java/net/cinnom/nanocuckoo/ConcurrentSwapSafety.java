@@ -28,7 +28,8 @@ public enum ConcurrentSwapSafety {
 	/**
 	 * Fast insert safety. Swaps are not locked. Can lose a number of previously inserted values up to (concurrent
 	 * insertion threads - 1) when the filter hits max load. Also more likely to get a false-negative when doing
-	 * concurrent inserts/contains, but should still be extremely rare.
+	 * concurrent inserts/contains/deletes, especially when a large amount of swaps are happening,
+	 * but should still be rare.
 	 */
 	FAST,
 	/**
