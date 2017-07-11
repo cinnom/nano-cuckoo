@@ -1,3 +1,7 @@
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Build Status](https://travis-ci.org/cinnom/nano-cuckoo.svg?branch=master)](https://travis-ci.org/cinnom/nano-cuckoo)
+[![Coverage Status](https://coveralls.io/repos/github/cinnom/nano-cuckoo/badge.svg?branch=master)](https://coveralls.io/github/cinnom/nano-cuckoo?branch=master)
+
 nano-cuckoo
 =====
 Fast Java cuckoo filter implementation that utilizes sun.misc.Unsafe for native memory access.
