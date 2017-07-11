@@ -255,40 +255,43 @@ public class NanoCuckooFilter implements Serializable {
 	 */
 	public int delete( long hash, int count ) {
 
-		int fingerprint = fingerprintFromLong( hash );
-		long bucket1 = buckets.getBucket( hash );
-
-		int deletedCount;
 		try {
-			bucketLocker.lockBucket( bucket1 );
-			deletedCount = buckets.deleteCount( bucket1, fingerprint, count );
-		} finally {
-			bucketLocker.unlockBucket( bucket1 );
-		}
+			int fingerprint = fingerprintFromLong( hash );
+			long bucket1 = buckets.getBucket( hash );
 
-		int remaining = count - deletedCount;
-		if ( remaining > 0 ) {
-
-			long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
-
+			int deletedCount;
 			try {
-				bucketLocker.lockBucket( bucket2 );
-				deletedCount += buckets.deleteCount( bucket2, fingerprint, remaining );
+				bucketLocker.lockBucket( bucket1 );
+				deletedCount = buckets.deleteCount( bucket1, fingerprint, count );
 			} finally {
-				bucketLocker.unlockBucket( bucket2 );
+				bucketLocker.unlockBucket( bucket1 );
 			}
 
-			if ( deletedCount < count ) {
-				kickedValues.lock();
-				if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
-					kickedValues.clear();
-					deletedCount++;
+			int remaining = count - deletedCount;
+			if ( remaining > 0 ) {
+
+				long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
+
+				try {
+					bucketLocker.lockBucket( bucket2 );
+					deletedCount += buckets.deleteCount( bucket2, fingerprint, remaining );
+				} finally {
+					bucketLocker.unlockBucket( bucket2 );
 				}
-				reinsertKickedFingerprint();
-				kickedValues.unlock();
+
+				if ( deletedCount < count ) {
+					kickedValues.lock();
+					if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
+						kickedValues.clear();
+						deletedCount++;
+					}
+					kickedValues.unlock();
+				}
 			}
+			return deletedCount;
+		} finally {
+			reinsertKickedFingerprint();
 		}
-		return deletedCount;
 	}
 
 	/**
@@ -325,39 +328,42 @@ public class NanoCuckooFilter implements Serializable {
 	 */
 	public boolean delete( long hash ) {
 
-		long bucket1 = buckets.getBucket( hash );
-
-		int fingerprint = fingerprintFromLong( hash );
-
 		try {
-			bucketLocker.lockBucket( bucket1 );
-			if ( buckets.delete( bucket1, fingerprint ) ) {
-				return true;
+			long bucket1 = buckets.getBucket( hash );
+
+			int fingerprint = fingerprintFromLong( hash );
+
+			try {
+				bucketLocker.lockBucket( bucket1 );
+				if ( buckets.delete( bucket1, fingerprint ) ) {
+					return true;
+				}
+			} finally {
+				bucketLocker.unlockBucket( bucket1 );
 			}
-		} finally {
-			bucketLocker.unlockBucket( bucket1 );
-		}
 
-		long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
+			long bucket2 = bucket1 ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
 
-		try {
-			bucketLocker.lockBucket( bucket2 );
-			if ( buckets.delete( bucket2, fingerprint ) ) {
-				return true;
+			try {
+				bucketLocker.lockBucket( bucket2 );
+				if ( buckets.delete( bucket2, fingerprint ) ) {
+					return true;
+				}
+			} finally {
+				bucketLocker.unlockBucket( bucket2 );
 			}
-		} finally {
-			bucketLocker.unlockBucket( bucket2 );
-		}
 
-		try {
-			kickedValues.lock();
-			if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
-				kickedValues.clear();
-				return true;
+			try {
+				kickedValues.lock();
+				if ( kickedValues.equals( fingerprint, bucket1, bucket2 ) ) {
+					kickedValues.clear();
+					return true;
+				}
+			} finally {
+				kickedValues.unlock();
 			}
 		} finally {
 			reinsertKickedFingerprint();
-			kickedValues.unlock();
 		}
 
 		return false;
