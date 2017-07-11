@@ -15,13 +15,21 @@
  */
 package net.cinnom.nanocuckoo;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import net.cinnom.nanocuckoo.encode.StringEncoder;
+import net.cinnom.nanocuckoo.hash.BucketHasher;
+import net.cinnom.nanocuckoo.hash.FingerprintHasher;
+
 /**
- * General usage test. This is really an integration test, but it runs quickly enough to be a unit test.
+ * NanoCuckooFilter tests. These are really integration tests, but it runs quickly enough to be a unit test. I'll
+ * replace it with a real unit test at some point...
  */
-public class GeneralUsageTest {
+public class NanoCuckooFilterTest {
 
 	@Test
 	public void generalUsageTest() {
@@ -91,10 +99,11 @@ public class GeneralUsageTest {
 				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
-			cuckooFilter.insert( 1 );
+			cuckooFilter.insert( 16384 );
 		}
 
-		Assert.assertEquals( 9, cuckooFilter.delete( 1, 9 ) );
+		Assert.assertEquals( 9, cuckooFilter.count( 16384 ) );
+		Assert.assertEquals( 9, cuckooFilter.delete( 16384, 9 ) );
 	}
 
 	@Test
@@ -106,10 +115,71 @@ public class GeneralUsageTest {
 				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
-			Assert.assertTrue( cuckooFilter.insert( 1 ) );
+			Assert.assertTrue( cuckooFilter.insert( 0 ) );
 		}
 		for ( int i = 0; i < 9; i++ ) {
-			Assert.assertTrue( cuckooFilter.delete( 1 ) );
+			Assert.assertTrue( cuckooFilter.delete( 0 ) );
 		}
+	}
+
+	@Test
+	public void deleteFalseTest() {
+
+		long capacity = 32;
+
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
+				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST )
+				.withFingerprintBits( 32 ).build();
+
+		for ( int i = 0; i < 9; i++ ) {
+			Assert.assertTrue( cuckooFilter.insert( i ) );
+		}
+		for ( int i = 9; i < 18; i++ ) {
+			Assert.assertFalse( cuckooFilter.delete( i ) );
+		}
+	}
+
+	@Test
+	public void getMemoryUsageBytesTest() {
+
+		BucketHasher bucketHasher = mock( BucketHasher.class );
+		FingerprintHasher fingerprintHasher = mock( FingerprintHasher.class );
+		StringEncoder stringEncoder = mock( StringEncoder.class );
+		KickedValues kickedValues = mock( KickedValues.class );
+		UnsafeBuckets unsafeBuckets = mock( UnsafeBuckets.class );
+		BucketLocker bucketLocker = mock( BucketLocker.class );
+		Swapper swapper = mock( Swapper.class );
+
+		long memoryUsageBytes = 1024L;
+
+		when( unsafeBuckets.getMemoryUsageBytes() ).thenReturn( memoryUsageBytes );
+
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( 8, bucketHasher, fingerprintHasher, stringEncoder,
+				kickedValues, unsafeBuckets, bucketLocker, swapper );
+
+		Assert.assertEquals( memoryUsageBytes, cuckooFilter.getMemoryUsageBytes() );
+	}
+
+	@Test
+	public void getLoadFactorTest() {
+
+		BucketHasher bucketHasher = mock( BucketHasher.class );
+		FingerprintHasher fingerprintHasher = mock( FingerprintHasher.class );
+		StringEncoder stringEncoder = mock( StringEncoder.class );
+		KickedValues kickedValues = mock( KickedValues.class );
+		UnsafeBuckets unsafeBuckets = mock( UnsafeBuckets.class );
+		BucketLocker bucketLocker = mock( BucketLocker.class );
+		Swapper swapper = mock( Swapper.class );
+
+		long insertedCount = 512L;
+		long capacity = 1024L;
+
+		when( unsafeBuckets.getInsertedCount() ).thenReturn( insertedCount );
+		when( unsafeBuckets.getCapacity() ).thenReturn( capacity );
+
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( 8, bucketHasher, fingerprintHasher, stringEncoder,
+				kickedValues, unsafeBuckets, bucketLocker, swapper );
+
+		Assert.assertEquals( (double) insertedCount / capacity, cuckooFilter.getLoadFactor(), 0.000001 );
 	}
 }

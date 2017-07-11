@@ -33,7 +33,8 @@ public class SerializationTest {
 	public void serializationTest() throws IOException, ClassNotFoundException {
 
 		// Create a filter
-		NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( 32 ).build();
+		NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( 32 )
+				.withConcurrentSwapSafety( ConcurrentSwapSafety.SMART ).build();
 
 		String testValue = "test value";
 

@@ -46,7 +46,7 @@ public class SmartSwapperTest {
 
 		smartSwapper.swap( fingerprint, bucket );
 
-		verify( fastSwapper, times(1) ).swap( fingerprint, bucket );
+		verify( fastSwapper ).swap( fingerprint, bucket );
 		verify( reliableSwapper, never() ).swap( fingerprint, bucket );
 	}
 
@@ -68,7 +68,7 @@ public class SmartSwapperTest {
 
 		smartSwapper.swap( fingerprint, bucket );
 
-		verify( reliableSwapper, times(1) ).swap( fingerprint, bucket );
+		verify( reliableSwapper ).swap( fingerprint, bucket );
 		verify( fastSwapper, never() ).swap( fingerprint, bucket );
 	}
 }

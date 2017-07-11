@@ -24,6 +24,27 @@ import org.junit.Test;
 public class ByteUnsafeBucketsTest {
 
 	@Test
+	public void swapTest() {
+
+		final int entries = 4;
+		final long buckets = 32;
+		final boolean counting = false;
+
+		final ByteUnsafeBuckets byteUnsafeBuckets = new ByteUnsafeBuckets( entries, buckets, counting );
+
+		for ( int e = 0; e < entries; e++ ) {
+			for ( int b = 0; b < buckets; b++ ) {
+
+				int value = (23 + e * b);
+				int swapValue = (value + 5);
+				byteUnsafeBuckets.putValue( e, b, value );
+				Assert.assertEquals( value, byteUnsafeBuckets.swap( e, b, swapValue ) );
+				Assert.assertEquals( swapValue, byteUnsafeBuckets.getValue( e, b ) );
+			}
+		}
+	}
+
+	@Test
 	public void multiEntriesBucketsTest() {
 
 		final int entries = 4;
