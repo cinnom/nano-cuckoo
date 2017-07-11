@@ -16,6 +16,7 @@
 package net.cinnom.nanocuckoo;
 
 import java.io.Serializable;
+import java.util.SplittableRandom;
 
 import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 
@@ -26,16 +27,15 @@ class SmartSwapper implements Swapper, Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	private final FastSwapper fastSwapper;
-	private final ReliableSwapper reliableSwapper;
+	private final Swapper fastSwapper;
+	private final Swapper reliableSwapper;
 	private final long maxFastCount;
 	private final UnsafeBuckets buckets;
 
-	SmartSwapper( final KickedValues kickedValues, final BucketLocker bucketLocker, final UnsafeBuckets buckets,
-				  final FingerprintHasher fpHasher, final int maxKicks, final int randomSeed, double smartInsertLoadFactor ) {
+	SmartSwapper( final Swapper fastSwapper, final Swapper reliableSwapper, final UnsafeBuckets buckets, final double smartInsertLoadFactor ) {
 
-		fastSwapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, randomSeed );
-		reliableSwapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, randomSeed );
+		this.fastSwapper = fastSwapper;
+		this.reliableSwapper = reliableSwapper;
 
 		this.maxFastCount = (long) ( buckets.getCapacity() * smartInsertLoadFactor );
 		this.buckets = buckets;

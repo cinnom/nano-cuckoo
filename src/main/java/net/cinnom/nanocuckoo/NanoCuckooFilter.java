@@ -18,6 +18,7 @@ package net.cinnom.nanocuckoo;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.SplittableRandom;
 
 import net.cinnom.nanocuckoo.encode.StringEncoder;
 import net.cinnom.nanocuckoo.encode.UTF8Encoder;
@@ -57,60 +58,28 @@ public class NanoCuckooFilter implements Serializable {
 	private final int fpPerLong;
 	private final int fpMask;
 
-	private final KickedValues kickedValues = new KickedValues();
+	private final KickedValues kickedValues;
 	private final BucketLocker bucketLocker;
 	private final Swapper swapper;
 
-	private NanoCuckooFilter( int entriesPerBucket, long capacity, int fpBits, int maxKicks, int seed,
-			BucketHasher bucketHasher, FingerprintHasher fpHasher, int concurrency, boolean countingEnabled,
-			double smartInsertLoadFactor, StringEncoder stringEncoder, ConcurrentSwapSafety concurrentSwapSafety ) {
+	NanoCuckooFilter( int fpBits, BucketHasher bucketHasher, FingerprintHasher fpHasher,
+			StringEncoder stringEncoder, final KickedValues kickedValues, final UnsafeBuckets buckets,
+			final BucketLocker bucketLocker, final Swapper swapper ) {
 
-		boolean countingDisabled = !countingEnabled;
-
-		long bucketCount = (long) Math.ceil( (double) capacity / entriesPerBucket );
-
-		switch ( fpBits ) {
-			case BITS_PER_BYTE:
-				buckets = new ByteUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
-				break;
-			case BITS_PER_SHORT:
-				buckets = new ShortUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
-				break;
-			case BITS_PER_INT:
-				buckets = new IntUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
-				break;
-			default:
-				buckets = new VariableUnsafeBuckets( entriesPerBucket, bucketCount, fpBits, countingDisabled );
-				break;
-		}
-
+		this.kickedValues = kickedValues;
+		this.buckets = buckets;
 		this.stringEncoder = stringEncoder;
 		this.bucketHasher = bucketHasher;
 		this.fpHasher = fpHasher;
 		this.fpBits = fpBits;
-
-		this.bucketLocker = new BucketLocker( concurrency, buckets.getBucketCount() );
+		this.bucketLocker = bucketLocker;
+		this.swapper = swapper;
 
 		// Set how many potential fingerprints we can locate in a bucket hash
 		fpPerLong = BITS_PER_LONG / fpBits;
 
 		// Set the mask that will pull fingerprint bits from the bucket hash
 		fpMask = -1 >>> ( BITS_PER_INT - fpBits );
-
-		switch ( concurrentSwapSafety ) {
-
-			case FAST:
-				swapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed );
-				break;
-			case SMART:
-				swapper = new SmartSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed,
-						smartInsertLoadFactor );
-				break;
-			case RELIABLE:
-			default:
-				swapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed );
-				break;
-		}
 	}
 
 	/**
@@ -327,7 +296,7 @@ public class NanoCuckooFilter implements Serializable {
 	 * default).
 	 *
 	 * @param value
-	 *            Valie to delete.
+	 *            Value to delete.
 	 * @return True if value was deleted, false if not.
 	 */
 	public boolean delete( String value ) {
@@ -436,8 +405,8 @@ public class NanoCuckooFilter implements Serializable {
 	}
 
 	/**
-	 * Close this filter. This needs to be called to deallocate native memory. Any attempts to use the filter after closing
-	 * it will generally result in a NullPointerException.
+	 * Close this filter. This needs to be called to deallocate native memory. Any attempts to use the filter after
+	 * closing it will generally result in a NullPointerException.
 	 */
 	public void close() {
 
@@ -552,8 +521,54 @@ public class NanoCuckooFilter implements Serializable {
 		 */
 		public NanoCuckooFilter build() {
 
-			return new NanoCuckooFilter( entriesPerBucket, capacity, fpBits, maxKicks, seed, bucketHasher, fpHasher,
-					concurrency, countingEnabled, smartInsertLoadFactor, stringEncoder, concurrentSwapSafety );
+			boolean countingDisabled = !countingEnabled;
+
+			final long bucketCount = (long) Math.ceil( (double) capacity / entriesPerBucket );
+
+			UnsafeBuckets buckets;
+
+			switch ( fpBits ) {
+				case BITS_PER_BYTE:
+					buckets = new ByteUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
+					break;
+				case BITS_PER_SHORT:
+					buckets = new ShortUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
+					break;
+				case BITS_PER_INT:
+					buckets = new IntUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
+					break;
+				default:
+					buckets = new VariableUnsafeBuckets( entriesPerBucket, bucketCount, fpBits, countingDisabled );
+					break;
+			}
+
+			final KickedValues kickedValues = new KickedValues();
+			final BucketLocker bucketLocker = new BucketLocker( concurrency, buckets.getBucketCount() );
+			Swapper swapper;
+
+			final SplittableRandom random = new SplittableRandom( seed );
+
+			switch ( concurrentSwapSafety ) {
+
+				case FAST:
+					swapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed, random );
+					break;
+				case SMART:
+					Swapper fastSwapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks,
+							seed, random );
+					Swapper reliableSwapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher,
+							maxKicks, seed, random );
+					swapper = new SmartSwapper( fastSwapper, reliableSwapper, buckets, smartInsertLoadFactor );
+					break;
+				case RELIABLE:
+				default:
+					swapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed,
+							random );
+					break;
+			}
+
+			return new NanoCuckooFilter( fpBits, bucketHasher, fpHasher, stringEncoder, kickedValues, buckets,
+					bucketLocker, swapper );
 		}
 
 		/**

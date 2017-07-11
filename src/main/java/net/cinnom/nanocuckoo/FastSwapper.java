@@ -39,7 +39,7 @@ class FastSwapper implements Swapper, Serializable {
 	private transient SplittableRandom random;
 
 	FastSwapper( final KickedValues kickedValues, final BucketLocker bucketLocker, final UnsafeBuckets buckets,
-			final FingerprintHasher fpHasher, final int maxKicks, final int randomSeed ) {
+			final FingerprintHasher fpHasher, final int maxKicks, final int randomSeed, final SplittableRandom random ) {
 
 		this.kickedValues = kickedValues;
 		this.bucketLocker = bucketLocker;
@@ -47,7 +47,7 @@ class FastSwapper implements Swapper, Serializable {
 		this.fpHasher = fpHasher;
 		this.maxKicks = maxKicks;
 		this.randomSeed = randomSeed;
-		random = new SplittableRandom( randomSeed );
+		this.random = random;
 	}
 
 	@Override

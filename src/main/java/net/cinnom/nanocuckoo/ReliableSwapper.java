@@ -38,7 +38,7 @@ class ReliableSwapper implements Swapper, Serializable {
 	private transient SplittableRandom random;
 
 	ReliableSwapper( final KickedValues kickedValues, final BucketLocker bucketLocker, final UnsafeBuckets buckets,
-			final FingerprintHasher fpHasher, final int maxKicks, final int randomSeed ) {
+			final FingerprintHasher fpHasher, final int maxKicks, final int randomSeed, final SplittableRandom random ) {
 
 		this.kickedValues = kickedValues;
 		this.bucketLocker = bucketLocker;
@@ -46,7 +46,7 @@ class ReliableSwapper implements Swapper, Serializable {
 		this.fpHasher = fpHasher;
 		this.maxKicks = maxKicks;
 		this.randomSeed = randomSeed;
-		random = new SplittableRandom( randomSeed );
+		this.random = random;
 	}
 
 	@Override
@@ -64,24 +64,25 @@ class ReliableSwapper implements Swapper, Serializable {
 					int entrySwap = random.nextInt() & buckets.getEntryMask();
 
 					try {
-						bucketLocker.lockBucket( kickedValues.getKickedBucket() );
-						kickedValues.setKickedFingerprint( buckets.swap( entrySwap, kickedValues.getKickedBucket(),
-								kickedValues.getKickedFingerprint() ) );
+						bucketLocker.lockBucket( bucket );
+						fingerprint = buckets.swap( entrySwap, bucket, fingerprint );
+						kickedValues.setKickedFingerprint( fingerprint );
 					} finally {
-						bucketLocker.unlockBucket( kickedValues.getKickedBucket() );
+						bucketLocker.unlockBucket( bucket );
 					}
 
-					kickedValues.setKickedBucket( kickedValues.getKickedBucket()
-							^ buckets.getBucket( fpHasher.getHash( kickedValues.getKickedFingerprint() ) ) );
+					bucket = bucket ^ buckets.getBucket( fpHasher.getHash( fingerprint ) );
+					kickedValues.setKickedBucket( bucket );
 
-					bucketLocker.lockBucket( kickedValues.getKickedBucket() );
-					if ( buckets.insert( kickedValues.getKickedBucket(), kickedValues.getKickedFingerprint() ) ) {
-						bucketLocker.unlockBucket( kickedValues.getKickedBucket() );
-						kickedValues.clear();
-						return true;
+					try {
+						bucketLocker.lockBucket( bucket );
+						if ( buckets.insert( bucket, fingerprint ) ) {
+							kickedValues.clear();
+							return true;
+						}
+					} finally {
+						bucketLocker.unlockBucket( bucket );
 					}
-					bucketLocker.unlockBucket( kickedValues.getKickedBucket() );
-
 				}
 
 				buckets.incrementInsertedCount(); // increase count when kicked value set
