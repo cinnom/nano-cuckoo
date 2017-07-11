@@ -36,7 +36,6 @@ abstract class UnsafeBuckets implements Serializable {
 	private static final int BITS_PER_LONG = 64;
 
 	private static final int DIV_8 = 3;
-	private static final long MOD_8_MASK = 0x0000000000000007;
 
 	private static final long MAX_CAPACITY = 0x1000000000000000L;
 	private static final long MIN_CAPACITY = 0x0000000000000008L;
@@ -71,9 +70,6 @@ abstract class UnsafeBuckets implements Serializable {
 		entryMask = this.entries - 1;
 
 		long capacityBytes = ( realCapacity >>> DIV_8 ) * fpBits;
-		if ( ( realCapacity & MOD_8_MASK ) > 0 ) {
-			capacityBytes++;
-		}
 
 		this.capacity = realCapacity;
 		this.capacityBytes = capacityBytes;
