@@ -109,7 +109,7 @@ See [NanoCuckooFilter.Builder](https://cinnom.github.io/nano-cuckoo/index.html?n
 
 Type Support
 =====
-Currently, only String, byte[], and long can be inserted into the filter. Generic type support may be added later, but I generally recommend serializing data yourself for optimal performance. 
+Currently, only String, byte[], and long (pre-hashed value) types can be inserted into the filter. Generic type support may be added later, but I generally recommend serializing data yourself for optimal performance.
 
 Multithreading
 =====
