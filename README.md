@@ -1,4 +1,6 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.cinnom/nano-cuckoo/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.cinnom/nano-cuckoo)
+[![Javadocs](http://javadoc.io/badge/net.cinnom/nano-cuckoo.svg)](http://javadoc.io/doc/net.cinnom/nano-cuckoo)
 [![Build Status](https://travis-ci.org/cinnom/nano-cuckoo.svg?branch=master)](https://travis-ci.org/cinnom/nano-cuckoo)
 [![Coverage Status](https://coveralls.io/repos/github/cinnom/nano-cuckoo/badge.svg?branch=master)](https://coveralls.io/github/cinnom/nano-cuckoo?branch=master)
 
@@ -11,6 +13,16 @@ What is a Cuckoo filter?
 ["Cuckoo Filter: Better Than Bloom" by Bin Fan, David G. Andersen, Michael Kaminsky, and Michael D. Mitzenmacher](https://www.cs.cmu.edu/~dga/papers/cuckoo-conext2014.pdf)
 
 [Probabilistic Filters By Example](https://bdupras.github.io/filter-tutorial/)
+
+Maven
+=====
+```xml
+<dependency>
+    <groupId>net.cinnom</groupId>
+    <artifactId>nano-cuckoo</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
 
 General Usage
 =====
