@@ -29,7 +29,7 @@ public class XXHasher implements BucketHasher, Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private final int seed;
-	private transient XXHashFactory factory = XXHashFactory.fastestInstance();
+	private transient XXHashFactory factory = XXHashFactory.unsafeInstance();
 
 	/**
 	 * Instantiate the XXHasher with the given random seed.
