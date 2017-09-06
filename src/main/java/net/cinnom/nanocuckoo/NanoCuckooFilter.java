@@ -38,9 +38,6 @@ import sun.misc.Cleaner;
  * This filter uses sun.misc.Unsafe to allocate native memory. Filter creation will fail if Unsafe can't be obtained, or
  * if memory can't be allocated.
  * </p>
- * <p>
- * Close this filter via its close() method, or a memory leak WILL occur.
- * </p>
  */
 public class NanoCuckooFilter implements Serializable {
 
