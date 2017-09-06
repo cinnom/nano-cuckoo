@@ -16,6 +16,7 @@
 package net.cinnom.nanocuckoo;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.SplittableRandom;
@@ -26,6 +27,7 @@ import net.cinnom.nanocuckoo.hash.BucketHasher;
 import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
 import net.cinnom.nanocuckoo.hash.XXHasher;
+import sun.misc.Cleaner;
 
 /**
  * <p>
@@ -62,9 +64,11 @@ public class NanoCuckooFilter implements Serializable {
 	private final BucketLocker bucketLocker;
 	private final Swapper swapper;
 
-	NanoCuckooFilter( int fpBits, BucketHasher bucketHasher, FingerprintHasher fpHasher,
-			StringEncoder stringEncoder, final KickedValues kickedValues, final UnsafeBuckets buckets,
-			final BucketLocker bucketLocker, final Swapper swapper ) {
+	private transient Cleaner cleaner;
+
+	NanoCuckooFilter( int fpBits, BucketHasher bucketHasher, FingerprintHasher fpHasher, StringEncoder stringEncoder,
+			final KickedValues kickedValues, final UnsafeBuckets buckets, final BucketLocker bucketLocker,
+			final Swapper swapper ) {
 
 		this.kickedValues = kickedValues;
 		this.buckets = buckets;
@@ -80,6 +84,8 @@ public class NanoCuckooFilter implements Serializable {
 
 		// Set the mask that will pull fingerprint bits from the bucket hash
 		fpMask = -1 >>> ( BITS_PER_INT - fpBits );
+
+		cleaner = Cleaner.create( this, new Deallocator( buckets ) );
 	}
 
 	/**
@@ -411,12 +417,13 @@ public class NanoCuckooFilter implements Serializable {
 	}
 
 	/**
-	 * Close this filter. This needs to be called to deallocate native memory. Any attempts to use the filter after
-	 * closing it will generally result in a NullPointerException.
+	 * Close this filter. This can to be called to immediately deallocate native memory. Otherwise, the memory will be
+	 * freed when the GC gets around to it. Any attempts to use the filter after closing it will generally result in a
+	 * NullPointerException.
 	 */
 	public void close() {
 
-		buckets.close();
+		cleaner.clean();
 	}
 
 	private int fingerprintFromLong( long hash ) {
@@ -479,11 +486,37 @@ public class NanoCuckooFilter implements Serializable {
 		}
 	}
 
+	private void readObject( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+
+		in.defaultReadObject();
+
+		cleaner = Cleaner.create( this, new Deallocator( buckets ) );
+	}
+
 	private void writeObject( ObjectOutputStream out ) throws IOException {
 
 		bucketLocker.lockAllBuckets();
 		out.defaultWriteObject();
 		bucketLocker.unlockAllBuckets();
+	}
+
+	/**
+	 * Closes UnsafeBuckets.
+	 */
+	static class Deallocator implements Runnable {
+
+		private final UnsafeBuckets buckets;
+
+		Deallocator( final UnsafeBuckets buckets ) {
+
+			this.buckets = buckets;
+		}
+
+		@Override
+		public void run() {
+
+			buckets.close();
+		}
 	}
 
 	/**

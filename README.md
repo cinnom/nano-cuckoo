@@ -69,7 +69,8 @@ public class CuckooTest {
         // Double filter capacity by doubling entries per bucket. However, this also roughly doubles max FPP.
         cuckooFilter.expand();
         
-        // Close the filter when finished with it. This is important!
+        // Close the filter when finished with it. This is optional to immediately free memory used by the filter.
+        // Otherwise, the memory will be freed when the GC gets around to it.
         cuckooFilter.close();
     }
 }
@@ -99,7 +100,7 @@ public class CuckooTest {
         objectOutputStream.writeObject( cuckooFilter );
         byte[] serializedBytes = byteOutputStream.toByteArray();
         
-        // Close the current filter before replacing it
+        // Close the current filter before replacing it (optional)
         cuckooFilter.close();
         
         // Read the serialized filter in from the byte array
@@ -109,7 +110,7 @@ public class CuckooTest {
         
         boolean isValueInFilter = cuckooFilter.contains( testValue ); // Returns true
         
-        // Close the filter
+        // Close the filter (optional)
         cuckooFilter.close();
     }
 }

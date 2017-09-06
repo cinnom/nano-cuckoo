@@ -89,7 +89,7 @@ public class NanoCuckooFilterTest {
 
 		Assert.assertEquals( capacity * 2, cuckooFilter.getCapacity() );
 
-		// Close the filter when finished with it. This is important!
+		// Close the filter when finished with it.
 		cuckooFilter.close();
 	}
 
@@ -209,5 +209,17 @@ public class NanoCuckooFilterTest {
 		cuckooFilter.delete( 1 );
 
 		verify( kickedValues ).clear();
+	}
+
+	@Test
+	public void deallocatorTest() {
+
+		final UnsafeBuckets unsafeBuckets = mock( UnsafeBuckets.class );
+
+		NanoCuckooFilter.Deallocator deallocator = new NanoCuckooFilter.Deallocator( unsafeBuckets );
+
+		deallocator.run();
+
+		verify( unsafeBuckets ).close();
 	}
 }
