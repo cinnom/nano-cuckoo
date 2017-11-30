@@ -34,6 +34,7 @@ public class XXHasherTest {
 			values[i] = (byte) i;
 		}
 
+		Assert.assertEquals( NanoCuckooFilter.Builder.DEFAULT_SEED, xxHasher.getSeed() );
 		Assert.assertEquals( -4073436676363075178L, xxHasher.getHash( values ) );
 	}
 
@@ -49,6 +50,7 @@ public class XXHasherTest {
 			values[i] = (byte) i;
 		}
 
+		Assert.assertEquals( seed, xxHasher.getSeed() );
 		Assert.assertEquals( -6925839588689899575L, xxHasher.getHash( values ) );
 	}
 }

@@ -18,7 +18,6 @@ package net.cinnom.nanocuckoo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 
 import sun.misc.Unsafe;
@@ -51,7 +50,7 @@ abstract class UnsafeBuckets {
 
 	UnsafeBuckets( int entries, long bucketCount, int fpBits, boolean countingDisabled, long initialCount ) {
 
-		unsafe = getUnsafe();
+		unsafe = new UnsafeProvider().getUnsafe();
 
 		long realCapacity = Math.max( Math.min( Long.highestOneBit( bucketCount ), MAX_CAPACITY ), MIN_CAPACITY );
 
@@ -271,17 +270,6 @@ abstract class UnsafeBuckets {
 		for ( int i = 0; i < this.entries; i++ ) {
 			addresses[i] = unsafe.allocateMemory( capacityBytes );
 			unsafe.setMemory( addresses[i], capacityBytes, (byte) 0 );
-		}
-	}
-
-	private Unsafe getUnsafe() {
-
-		try {
-			Field singleoneInstanceField = Unsafe.class.getDeclaredField( "theUnsafe" );
-			singleoneInstanceField.setAccessible( true );
-			return (Unsafe) singleoneInstanceField.get( null );
-		} catch ( IllegalAccessException | NoSuchFieldException e ) {
-			throw new RuntimeException( "Failed to obtain Unsafe", e );
 		}
 	}
 }

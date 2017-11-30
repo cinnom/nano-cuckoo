@@ -21,6 +21,7 @@ public class MetroHasherTest {
 			values[i] = (byte) i;
 		}
 
+		Assert.assertEquals( NanoCuckooFilter.Builder.DEFAULT_SEED, metroHasher.getSeed() );
 		Assert.assertEquals( -4604957212005795163L, metroHasher.getHash( values ) );
 	}
 
@@ -36,6 +37,7 @@ public class MetroHasherTest {
 			values[i] = (byte) i;
 		}
 
+		Assert.assertEquals( seed, metroHasher.getSeed() );
 		Assert.assertEquals( 5100246155154649873L, metroHasher.getHash( values ) );
 	}
 }

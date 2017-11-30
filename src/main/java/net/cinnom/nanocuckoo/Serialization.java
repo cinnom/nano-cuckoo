@@ -13,7 +13,11 @@ import net.cinnom.nanocuckoo.hash.XXHasher;
 import net.cinnom.nanocuckoo.random.RandomInt;
 import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
 
-class Serialization {
+final class Serialization {
+
+	private Serialization() {
+
+	}
 
 	static final byte CUSTOM_ENCODER_TYPE = 0;
 	private static final byte UTF8_ENCODER_TYPE = 1;
