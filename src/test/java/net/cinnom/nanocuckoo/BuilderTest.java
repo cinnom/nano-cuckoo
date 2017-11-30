@@ -15,6 +15,7 @@
  */
 package net.cinnom.nanocuckoo;
 
+import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,7 +35,7 @@ public class BuilderTest {
 
 		try {
 			NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -47,7 +48,7 @@ public class BuilderTest {
 		try {
 			NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -59,7 +60,7 @@ public class BuilderTest {
 
 		try {
 			builder.withEntriesPerBucket( 7 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -73,7 +74,7 @@ public class BuilderTest {
 		try {
 			builder.withEntriesPerBucket( 8 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -85,7 +86,7 @@ public class BuilderTest {
 
 		try {
 			builder.withFingerprintBits( 0 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -98,7 +99,7 @@ public class BuilderTest {
 
 		try {
 			builder.withFingerprintBits( 33 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -112,7 +113,7 @@ public class BuilderTest {
 		try {
 			builder.withFingerprintBits( 30 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 
 		builder.build();
@@ -127,7 +128,7 @@ public class BuilderTest {
 		try {
 			builder.withFingerprintBits( 8 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 
 		builder.build();
@@ -142,7 +143,7 @@ public class BuilderTest {
 		try {
 			builder.withFingerprintBits( 16 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 
 		builder.build();
@@ -157,7 +158,7 @@ public class BuilderTest {
 		try {
 			builder.withFingerprintBits( 32 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 
 		builder.build();
@@ -171,7 +172,7 @@ public class BuilderTest {
 
 		try {
 			builder.withMaxKicks( -1 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -185,7 +186,7 @@ public class BuilderTest {
 		try {
 			builder.withMaxKicks( 33 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -197,7 +198,7 @@ public class BuilderTest {
 
 		try {
 			builder.withStringEncoder( null );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -211,7 +212,7 @@ public class BuilderTest {
 		try {
 			builder.withStringEncoder( new UTF16LEEncoder() );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -223,7 +224,7 @@ public class BuilderTest {
 
 		try {
 			builder.withBucketHasher( null );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -237,7 +238,7 @@ public class BuilderTest {
 		try {
 			builder.withBucketHasher( new XXHasher( 123 ) );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -249,7 +250,7 @@ public class BuilderTest {
 
 		try {
 			builder.withFingerprintHasher( null );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -263,7 +264,7 @@ public class BuilderTest {
 		try {
 			builder.withFingerprintHasher( new FixedHasher() );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -275,7 +276,7 @@ public class BuilderTest {
 
 		try {
 			builder.withConcurrency( 7 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalArgumentException ex ) {
 		}
 	}
@@ -289,7 +290,7 @@ public class BuilderTest {
 		try {
 			builder.withConcurrency( 8 );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
 		}
 	}
 
@@ -303,7 +304,33 @@ public class BuilderTest {
 			builder.withCountingEnabled( true );
 			builder.withCountingEnabled( false );
 		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
+			Assert.fail();
+		}
+	}
+
+	@Test
+	public void invalidRandomIntTest() {
+
+		int capacity = 32;
+		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
+
+		try {
+			builder.withRandomInt( null );
+			Assert.fail();
+		} catch ( IllegalArgumentException ex ) {
+		}
+	}
+
+	@Test
+	public void validRandomIntTest() {
+
+		int capacity = 32;
+		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
+
+		try {
+			builder.withRandomInt( new WrappedThreadLocalRandom() );
+		} catch ( IllegalArgumentException ex ) {
+			Assert.fail();
 		}
 	}
 }

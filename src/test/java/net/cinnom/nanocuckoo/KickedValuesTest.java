@@ -167,7 +167,7 @@ public class KickedValuesTest {
 
 		try {
 			kickedValues.unlock();
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalMonitorStateException e ) {
 
 		}

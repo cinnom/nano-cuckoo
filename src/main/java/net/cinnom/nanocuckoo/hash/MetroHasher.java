@@ -22,8 +22,6 @@ import net.cinnom.nanocuckoo.metro.UnsafeMetroHash64;
  */
 public class MetroHasher implements BucketHasher {
 
-	public static final int DEFAULT_SEED = 0x48F7E28A;
-
 	private final int seed;
 	private final UnsafeMetroHash64 metroHash64 = new UnsafeMetroHash64();
 
@@ -39,14 +37,6 @@ public class MetroHasher implements BucketHasher {
 	}
 
 	/**
-	 * Instantiate the MetroHasher with the default random seed {@value #DEFAULT_SEED}.
-	 */
-	public MetroHasher() {
-
-		this( DEFAULT_SEED );
-	}
-
-	/**
 	 * Get 64-bit bucket hash using MetroHash.
 	 *
 	 * @param data
@@ -57,5 +47,11 @@ public class MetroHasher implements BucketHasher {
 	public long getHash( byte[] data ) {
 
 		return metroHash64.hash( data, 0, data.length, seed );
+	}
+
+	@Override
+	public int getSeed() {
+
+		return seed;
 	}
 }

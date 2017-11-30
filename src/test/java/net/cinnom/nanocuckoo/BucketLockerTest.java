@@ -71,7 +71,7 @@ public class BucketLockerTest {
 
 		try {
 			bucketLocker.unlockBucket( 1 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalMonitorStateException e ) {
 		}
 	}
@@ -86,7 +86,7 @@ public class BucketLockerTest {
 
 		try {
 			bucketLocker.unlockAllBuckets();
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalMonitorStateException e ) {
 		}
 	}

@@ -28,4 +28,9 @@ public interface BucketHasher {
 	 * @return 64-bit hash.
 	 */
 	long getHash( final byte[] data );
+
+	/**
+	 * @return Hash seed.
+	 */
+	int getSeed();
 }

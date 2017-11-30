@@ -44,7 +44,7 @@ import sun.misc.Cleaner;
  */
 public class NanoCuckooFilter implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 2L;
 
 	private static final int BITS_PER_INT = 32;
 	private static final int BITS_PER_LONG = 64;
@@ -528,7 +528,7 @@ public class NanoCuckooFilter implements Serializable {
 		// Create bucket hasher
 		final byte bucketHasherType = in.readByte();
 		if ( bucketHasherType > 0 ) {
-			bucketHasher = Serialization.createBucketHasher( bucketHasherType );
+			bucketHasher = Serialization.createBucketHasher( bucketHasherType, in.readInt() );
 		} else {
 			bucketHasher = (BucketHasher) in.readObject();
 		}
@@ -584,6 +584,8 @@ public class NanoCuckooFilter implements Serializable {
 		out.writeByte( bucketHasherType );
 		if ( bucketHasherType <= Serialization.CUSTOM_BUCKET_HASHER_TYPE ) {
 			out.writeObject( bucketHasher );
+		} else {
+			out.writeInt( bucketHasher.getSeed() );
 		}
 
 		// Write fingerprint hasher
@@ -654,6 +656,7 @@ public class NanoCuckooFilter implements Serializable {
 	public static class Builder {
 
 		private static final int POS_INT = 0x7FFFFFFF;
+		public static final int DEFAULT_SEED = 0x48F7E28A;
 		private final long capacity;
 		private int entriesPerBucket = 4;
 		private int fpBits = 8;
@@ -661,7 +664,7 @@ public class NanoCuckooFilter implements Serializable {
 		private int concurrency = 64;
 		private boolean countingEnabled = false;
 		private StringEncoder stringEncoder = new UTF8Encoder();
-		private BucketHasher bucketHasher = new XXHasher( 0x48F7E28A );
+		private BucketHasher bucketHasher = new XXHasher( DEFAULT_SEED );
 		private FingerprintHasher fpHasher = new FixedHasher();
 		private RandomInt randomInt = new WrappedThreadLocalRandom();
 

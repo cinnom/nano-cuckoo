@@ -8,6 +8,7 @@ import net.cinnom.nanocuckoo.encode.UTF8Encoder;
 import net.cinnom.nanocuckoo.hash.BucketHasher;
 import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
+import net.cinnom.nanocuckoo.hash.MetroHasher;
 import net.cinnom.nanocuckoo.hash.XXHasher;
 import net.cinnom.nanocuckoo.random.RandomInt;
 import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
@@ -22,6 +23,7 @@ class Serialization {
 
 	static final byte CUSTOM_BUCKET_HASHER_TYPE = 0;
 	private static final byte XXHASHER_BUCKET_HASHER_TYPE = 1;
+	private static final byte METROHASHER_BUCKET_HASHER_TYPE = 2;
 
 	static final byte CUSTOM_FP_HASHER_TYPE = 0;
 	private static final byte FIXED_FP_HASHER_TYPE = 1;
@@ -66,15 +68,20 @@ class Serialization {
 		if ( bucketHasher instanceof XXHasher ) {
 			return XXHASHER_BUCKET_HASHER_TYPE;
 		}
+		if ( bucketHasher instanceof MetroHasher ) {
+			return METROHASHER_BUCKET_HASHER_TYPE;
+		}
 		return CUSTOM_BUCKET_HASHER_TYPE;
 	}
 
-	static BucketHasher createBucketHasher( final byte type ) {
+	static BucketHasher createBucketHasher( final byte type, final int seed ) {
 
 		switch ( type ) {
+			case METROHASHER_BUCKET_HASHER_TYPE:
+				return new MetroHasher( seed );
 			case XXHASHER_BUCKET_HASHER_TYPE:
 			default:
-				return new XXHasher();
+				return new XXHasher( seed );
 		}
 	}
 

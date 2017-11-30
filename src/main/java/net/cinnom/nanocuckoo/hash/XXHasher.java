@@ -22,8 +22,6 @@ import net.jpountz.xxhash.XXHashFactory;
  */
 public class XXHasher implements BucketHasher {
 
-	public static final int DEFAULT_SEED = 0x48F7E28A;
-
 	private final int seed;
 	private XXHashFactory factory = XXHashFactory.unsafeInstance();
 
@@ -39,14 +37,6 @@ public class XXHasher implements BucketHasher {
 	}
 
 	/**
-	 * Instantiate the XXHasher with the default random seed {@value #DEFAULT_SEED}.
-	 */
-	public XXHasher() {
-
-		this( DEFAULT_SEED );
-	}
-
-	/**
 	 * Get 64-bit bucket hash using XXHash.
 	 *
 	 * @param data
@@ -57,5 +47,11 @@ public class XXHasher implements BucketHasher {
 	public long getHash( byte[] data ) {
 
 		return factory.hash64().hash( data, 0, data.length, seed );
+	}
+
+	@Override
+	public int getSeed() {
+
+		return seed;
 	}
 }

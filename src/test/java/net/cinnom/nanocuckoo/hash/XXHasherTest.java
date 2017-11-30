@@ -15,6 +15,7 @@
  */
 package net.cinnom.nanocuckoo.hash;
 
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,9 +27,7 @@ public class XXHasherTest {
 	@Test
 	public void getHashTest() {
 
-		final int seed = 0x48F7E28A;
-
-		final XXHasher xxHasher = new XXHasher( seed );
+		final XXHasher xxHasher = new XXHasher( NanoCuckooFilter.Builder.DEFAULT_SEED );
 
 		final byte[] values = new byte[1000];
 		for ( int i = 0; i < 1000; i++ ) {

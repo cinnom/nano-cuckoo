@@ -298,7 +298,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.insert( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -319,7 +319,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.expand();
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -343,7 +343,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.contains( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -367,7 +367,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.count( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -391,7 +391,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.delete( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -415,7 +415,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.deleteCount( bucket, value, 3 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
