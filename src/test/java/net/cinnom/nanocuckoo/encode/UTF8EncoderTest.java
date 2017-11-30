@@ -15,10 +15,10 @@
  */
 package net.cinnom.nanocuckoo.encode;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * UTF8Encoder tests

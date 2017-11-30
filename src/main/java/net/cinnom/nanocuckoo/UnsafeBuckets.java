@@ -15,13 +15,13 @@
  */
 package net.cinnom.nanocuckoo;
 
-import sun.misc.Unsafe;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
+
+import sun.misc.Unsafe;
 
 /**
  * Internal bucket implementation that uses sun.misc.Unsafe for native memory allocation.

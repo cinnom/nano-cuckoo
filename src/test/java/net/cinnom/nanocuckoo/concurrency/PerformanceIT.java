@@ -15,12 +15,13 @@
  */
 package net.cinnom.nanocuckoo.concurrency;
 
-import net.cinnom.nanocuckoo.NanoCuckooFilter;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.Test;
+
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
 
 /**
  * Informal performance/multithreading test.

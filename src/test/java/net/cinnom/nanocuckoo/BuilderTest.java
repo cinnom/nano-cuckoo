@@ -15,11 +15,12 @@
  */
 package net.cinnom.nanocuckoo;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 import net.cinnom.nanocuckoo.encode.UTF16LEEncoder;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
 import net.cinnom.nanocuckoo.hash.XXHasher;
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * NanoCuckooFilter.Builder tests.

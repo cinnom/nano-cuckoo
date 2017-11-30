@@ -26,7 +26,8 @@ public final class FixedHasher implements FingerprintHasher {
 	/**
 	 * "Hash" a fingerprint by multiplying it by 0xC4CEB9FE1A85EC53L.
 	 *
-	 * @param value Value to hash.
+	 * @param value
+	 *            Value to hash.
 	 * @return 64-bit hash.
 	 */
 	@Override

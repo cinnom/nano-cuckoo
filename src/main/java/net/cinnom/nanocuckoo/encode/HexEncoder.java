@@ -24,7 +24,8 @@ public class HexEncoder implements StringEncoder {
 	 * Encode a String into Hexadecimal value bytes. This method assumes that the input is a valid Hexadecimal String;
 	 * no validation is performed on the input.
 	 *
-	 * @param data String to encode.
+	 * @param data
+	 *            String to encode.
 	 * @return Hex value bytes.
 	 */
 	@Override
@@ -38,8 +39,8 @@ public class HexEncoder implements StringEncoder {
 			int offset = j << 1;
 			int nextOffset = offset + 1;
 
-			resultBytes[j] = (byte) ( ( getHexValue( data.charAt( offset ) ) << 4 ) + getHexValue(
-					data.charAt( nextOffset ) ) );
+			resultBytes[j] = (byte) ( ( getHexValue( data.charAt( offset ) ) << 4 )
+					+ getHexValue( data.charAt( nextOffset ) ) );
 		}
 
 		return resultBytes;

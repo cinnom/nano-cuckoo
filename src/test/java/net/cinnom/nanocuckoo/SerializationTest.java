@@ -15,14 +15,14 @@
  */
 package net.cinnom.nanocuckoo;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Serialization test. This is really an integration test, but it runs quickly enough to be a unit test.

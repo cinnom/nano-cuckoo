@@ -23,7 +23,8 @@ public class ASCIIEncoder implements StringEncoder {
 	/**
 	 * Encode a String into ASCII bytes.
 	 *
-	 * @param data String to encode.
+	 * @param data
+	 *            String to encode.
 	 * @return ASCII bytes.
 	 */
 	@Override

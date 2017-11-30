@@ -23,7 +23,8 @@ public class UTF16LEEncoder implements StringEncoder {
 	/**
 	 * Encode a String into UTF-16 Little Endian bytes.
 	 *
-	 * @param data String to encode.
+	 * @param data
+	 *            String to encode.
 	 * @return UTF-16 Little Endian bytes.
 	 */
 	@Override
