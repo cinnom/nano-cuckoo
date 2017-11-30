@@ -13,29 +13,31 @@ import net.cinnom.nanocuckoo.hash.XXHasher;
 import net.cinnom.nanocuckoo.random.RandomInt;
 import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
 
-final class Serialization {
+/**
+ * Provides serialization methods for optimizing serialized size.
+ */
+class Serialization {
 
-	private Serialization() {
+	private static final byte CUSTOM_TYPE = 0;
 
-	}
-
-	static final byte CUSTOM_ENCODER_TYPE = 0;
 	private static final byte UTF8_ENCODER_TYPE = 1;
 	private static final byte UTF16LE_ENCODER_TYPE = 2;
 	private static final byte ASCII_ENCODER_TYPE = 3;
 	private static final byte HEX_ENCODER_TYPE = 4;
 
-	static final byte CUSTOM_BUCKET_HASHER_TYPE = 0;
 	private static final byte XXHASHER_BUCKET_HASHER_TYPE = 1;
 	private static final byte METROHASHER_BUCKET_HASHER_TYPE = 2;
 
-	static final byte CUSTOM_FP_HASHER_TYPE = 0;
 	private static final byte FIXED_FP_HASHER_TYPE = 1;
 
-	static final byte CUSTOM_RANDOM_INT_TYPE = 0;
 	private static final byte THREADLOCAL_RANDOM_INT_TYPE = 1;
 
-	static byte getStringEncoderType( final StringEncoder stringEncoder ) {
+	boolean isCustomType( byte type ) {
+
+		return type == CUSTOM_TYPE;
+	}
+
+	byte getStringEncoderType( final StringEncoder stringEncoder ) {
 
 		if ( stringEncoder instanceof UTF8Encoder ) {
 			return UTF8_ENCODER_TYPE;
@@ -49,10 +51,10 @@ final class Serialization {
 		if ( stringEncoder instanceof HexEncoder ) {
 			return HEX_ENCODER_TYPE;
 		}
-		return CUSTOM_ENCODER_TYPE;
+		return CUSTOM_TYPE;
 	}
 
-	static StringEncoder createStringEncoder( final byte type ) {
+	StringEncoder createStringEncoder( final byte type ) {
 
 		switch ( type ) {
 			case ASCII_ENCODER_TYPE:
@@ -67,7 +69,7 @@ final class Serialization {
 		}
 	}
 
-	static byte getBucketHasherType( final BucketHasher bucketHasher ) {
+	byte getBucketHasherType( final BucketHasher bucketHasher ) {
 
 		if ( bucketHasher instanceof XXHasher ) {
 			return XXHASHER_BUCKET_HASHER_TYPE;
@@ -75,10 +77,10 @@ final class Serialization {
 		if ( bucketHasher instanceof MetroHasher ) {
 			return METROHASHER_BUCKET_HASHER_TYPE;
 		}
-		return CUSTOM_BUCKET_HASHER_TYPE;
+		return CUSTOM_TYPE;
 	}
 
-	static BucketHasher createBucketHasher( final byte type, final int seed ) {
+	BucketHasher createBucketHasher( final byte type, final int seed ) {
 
 		switch ( type ) {
 			case METROHASHER_BUCKET_HASHER_TYPE:
@@ -89,15 +91,15 @@ final class Serialization {
 		}
 	}
 
-	static byte getFingerprintHasherType( final FingerprintHasher fingerprintHasher ) {
+	byte getFingerprintHasherType( final FingerprintHasher fingerprintHasher ) {
 
 		if ( fingerprintHasher instanceof FixedHasher ) {
 			return FIXED_FP_HASHER_TYPE;
 		}
-		return CUSTOM_FP_HASHER_TYPE;
+		return CUSTOM_TYPE;
 	}
 
-	static FingerprintHasher createFingerprintHasher( final byte type ) {
+	FingerprintHasher createFingerprintHasher( final byte type ) {
 
 		switch ( type ) {
 			case FIXED_FP_HASHER_TYPE:
@@ -106,15 +108,15 @@ final class Serialization {
 		}
 	}
 
-	static byte getRandomIntType( final RandomInt randomInt ) {
+	byte getRandomIntType( final RandomInt randomInt ) {
 
 		if ( randomInt instanceof WrappedThreadLocalRandom ) {
 			return THREADLOCAL_RANDOM_INT_TYPE;
 		}
-		return CUSTOM_RANDOM_INT_TYPE;
+		return CUSTOM_TYPE;
 	}
 
-	static RandomInt createRandomInt( final byte type ) {
+	RandomInt createRandomInt( final byte type ) {
 
 		switch ( type ) {
 			case THREADLOCAL_RANDOM_INT_TYPE:

@@ -78,9 +78,9 @@ public class CuckooTest {
 
 Serialization
 =====
-Standard Java serialization is supported.
+Standard Java serialization is supported. Any custom implementations for StringEncoder, BucketHasher, FingerprintHasher, or RandomInt should be serializable, or filter serialization will fail.
 
-In addition, readMemory and writeMemory can be used to directly dump and replace filter memory.  
+In addition, readMemory and writeMemory can be used to directly dump and replace filter memory. The source and destination filters for readMemory and writeMemory should be built with the same parameters.
 
 Configuration
 =====

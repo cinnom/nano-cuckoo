@@ -491,6 +491,8 @@ public class NanoCuckooFilter implements Serializable {
 
 	private void readObject( ObjectInputStream in ) throws IOException, ClassNotFoundException {
 
+		final Serialization serialization = new Serialization();
+
 		// Create buckets
 		fpBits = in.readInt();
 		buckets = UnsafeBuckets.createBuckets( fpBits, in.readInt(), in.readLong(), in.readBoolean(), in.readLong() );
@@ -511,7 +513,7 @@ public class NanoCuckooFilter implements Serializable {
 		final byte randomIntType = in.readByte();
 		RandomInt randomInt;
 		if ( randomIntType > 0 ) {
-			randomInt = Serialization.createRandomInt( randomIntType );
+			randomInt = serialization.createRandomInt( randomIntType );
 		} else {
 			randomInt = (RandomInt) in.readObject();
 		}
@@ -520,7 +522,7 @@ public class NanoCuckooFilter implements Serializable {
 		// Create string encoder
 		final byte stringEncoderType = in.readByte();
 		if ( stringEncoderType > 0 ) {
-			stringEncoder = Serialization.createStringEncoder( stringEncoderType );
+			stringEncoder = serialization.createStringEncoder( stringEncoderType );
 		} else {
 			stringEncoder = (StringEncoder) in.readObject();
 		}
@@ -528,7 +530,7 @@ public class NanoCuckooFilter implements Serializable {
 		// Create bucket hasher
 		final byte bucketHasherType = in.readByte();
 		if ( bucketHasherType > 0 ) {
-			bucketHasher = Serialization.createBucketHasher( bucketHasherType, in.readInt() );
+			bucketHasher = serialization.createBucketHasher( bucketHasherType, in.readInt() );
 		} else {
 			bucketHasher = (BucketHasher) in.readObject();
 		}
@@ -536,7 +538,7 @@ public class NanoCuckooFilter implements Serializable {
 		// Create fingerprint hasher
 		final byte fpHasherType = in.readByte();
 		if ( fpHasherType > 0 ) {
-			fpHasher = Serialization.createFingerprintHasher( fpHasherType );
+			fpHasher = serialization.createFingerprintHasher( fpHasherType );
 		} else {
 			fpHasher = (FingerprintHasher) in.readObject();
 		}
@@ -547,6 +549,8 @@ public class NanoCuckooFilter implements Serializable {
 	private void writeObject( ObjectOutputStream out ) throws IOException {
 
 		bucketLocker.lockAllBuckets();
+
+		final Serialization serialization = new Serialization();
 
 		// Write bucket values
 		out.writeInt( fpBits );
@@ -566,32 +570,32 @@ public class NanoCuckooFilter implements Serializable {
 		// Write swapper values
 		out.writeInt( swapper.getMaxKicks() );
 		// Write random int provider
-		final byte randomIntType = Serialization.getRandomIntType( swapper.getRandomInt() );
+		final byte randomIntType = serialization.getRandomIntType( swapper.getRandomInt() );
 		out.writeByte( randomIntType );
-		if ( randomIntType <= Serialization.CUSTOM_RANDOM_INT_TYPE ) {
+		if ( serialization.isCustomType( randomIntType ) ) {
 			out.writeObject( swapper.getRandomInt() );
 		}
 
 		// Write string encoder
-		final byte stringEncoderType = Serialization.getStringEncoderType( stringEncoder );
+		final byte stringEncoderType = serialization.getStringEncoderType( stringEncoder );
 		out.writeByte( stringEncoderType );
-		if ( stringEncoderType == Serialization.CUSTOM_ENCODER_TYPE ) {
+		if ( serialization.isCustomType( stringEncoderType ) ) {
 			out.writeObject( stringEncoder );
 		}
 
 		// Write bucket hasher
-		final byte bucketHasherType = Serialization.getBucketHasherType( bucketHasher );
+		final byte bucketHasherType = serialization.getBucketHasherType( bucketHasher );
 		out.writeByte( bucketHasherType );
-		if ( bucketHasherType <= Serialization.CUSTOM_BUCKET_HASHER_TYPE ) {
+		if ( serialization.isCustomType( bucketHasherType ) ) {
 			out.writeObject( bucketHasher );
 		} else {
 			out.writeInt( bucketHasher.getSeed() );
 		}
 
 		// Write fingerprint hasher
-		final byte fpHasherType = Serialization.getFingerprintHasherType( fpHasher );
+		final byte fpHasherType = serialization.getFingerprintHasherType( fpHasher );
 		out.writeByte( fpHasherType );
-		if ( fpHasherType <= Serialization.CUSTOM_FP_HASHER_TYPE ) {
+		if ( serialization.isCustomType( fpHasherType ) ) {
 			out.writeObject( fpHasher );
 		}
 

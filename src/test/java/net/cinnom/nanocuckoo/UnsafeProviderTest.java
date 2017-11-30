@@ -29,7 +29,7 @@ public class UnsafeProviderTest {
 		doThrow( NoSuchFieldException.class ).when( spyUnsafeProvider ).getUnsafeField();
 
 		try {
-			spyUnsafeProvider.getUnsafe();
+			spyUnsafeProvider.init();
 			Assert.fail();
 		} catch ( final RuntimeException ex ) {
 			Assert.assertEquals( ex.getMessage(), "Failed to obtain Unsafe" );
@@ -48,7 +48,7 @@ public class UnsafeProviderTest {
 		when( unsafeField.get( null ) ).thenThrow( IllegalAccessException.class );
 
 		try {
-			spyUnsafeProvider.getUnsafe();
+			spyUnsafeProvider.init();
 			Assert.fail();
 		} catch ( final RuntimeException ex ) {
 			Assert.assertEquals( ex.getMessage(), "Failed to obtain Unsafe" );
