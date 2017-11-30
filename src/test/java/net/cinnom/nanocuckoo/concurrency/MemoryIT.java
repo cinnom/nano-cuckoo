@@ -1,8 +1,7 @@
 package net.cinnom.nanocuckoo.concurrency;
 
-import org.junit.Test;
-
 import net.cinnom.nanocuckoo.NanoCuckooFilter;
+import org.junit.Test;
 
 /**
  * Memory integration tests.

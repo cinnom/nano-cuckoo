@@ -32,8 +32,8 @@ public class ASCIIEncoderTest {
 		final String testStr = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
 		int i = 32;
-		for(byte oneByte : asciiEncoder.encode( testStr ) ) {
-			Assert.assertEquals(i++, oneByte);
+		for ( byte oneByte : asciiEncoder.encode( testStr ) ) {
+			Assert.assertEquals( i++, oneByte );
 		}
 	}
 

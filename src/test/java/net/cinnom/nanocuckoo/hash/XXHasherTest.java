@@ -31,11 +31,11 @@ public class XXHasherTest {
 		final XXHasher xxHasher = new XXHasher( seed );
 
 		final byte[] values = new byte[1000];
-		for(int i = 0; i < 1000; i++) {
+		for ( int i = 0; i < 1000; i++ ) {
 			values[i] = (byte) i;
 		}
 
-		Assert.assertEquals( -4073436676363075178L, xxHasher.getHash( values ));
+		Assert.assertEquals( -4073436676363075178L, xxHasher.getHash( values ) );
 	}
 
 	@Test
@@ -46,10 +46,10 @@ public class XXHasherTest {
 		final XXHasher xxHasher = new XXHasher( seed );
 
 		final byte[] values = new byte[1000];
-		for(int i = 0; i < 1000; i++) {
+		for ( int i = 0; i < 1000; i++ ) {
 			values[i] = (byte) i;
 		}
 
-		Assert.assertEquals( -6925839588689899575L, xxHasher.getHash( values ));
+		Assert.assertEquals( -6925839588689899575L, xxHasher.getHash( values ) );
 	}
 }

@@ -20,11 +20,11 @@ package net.cinnom.nanocuckoo;
  */
 final class ByteUnsafeBuckets extends UnsafeBuckets {
 
-	private static final int FP_BITS = 8;
+	static final int FP_BITS = 8;
 
-	ByteUnsafeBuckets( int entries, long bucketCount, boolean countingDisabled ) {
+	ByteUnsafeBuckets( int entries, long bucketCount, boolean countingDisabled, long initialCount ) {
 
-		super( entries, bucketCount, FP_BITS, countingDisabled );
+		super( entries, bucketCount, FP_BITS, countingDisabled, initialCount );
 	}
 
 	@Override

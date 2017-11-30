@@ -15,23 +15,18 @@
  */
 package net.cinnom.nanocuckoo.hash;
 
-import java.io.Serializable;
-
 /**
  * Hashes fingerprints by multiplying them by a fixed value. Much better throughput compared to XXHasher for
  * fingerprints. Credit goes to CuckooFilter4J for this idea.
  */
-public final class FixedHasher implements FingerprintHasher, Serializable {
-
-	private static final long serialVersionUID = 1L;
+public final class FixedHasher implements FingerprintHasher {
 
 	private static final long MURMUR_HASH_MIX = 0xC4CEB9FE1A85EC53L;
 
 	/**
 	 * "Hash" a fingerprint by multiplying it by 0xC4CEB9FE1A85EC53L.
-	 * 
-	 * @param value
-	 *            Value to hash.
+	 *
+	 * @param value Value to hash.
 	 * @return 64-bit hash.
 	 */
 	@Override

@@ -30,9 +30,9 @@ final class VariableUnsafeBuckets extends UnsafeBuckets {
 
 	private final int initClearMask;
 
-	VariableUnsafeBuckets( int entries, long bucketCount, int fpBits, boolean countingDisabled ) {
+	VariableUnsafeBuckets( int entries, long bucketCount, int fpBits, boolean countingDisabled, long initialCount ) {
 
-		super( entries, bucketCount, fpBits, countingDisabled );
+		super( entries, bucketCount, fpBits, countingDisabled, initialCount );
 
 		int shift = BITS_PER_INT - fpBits;
 		initClearMask = ( -1 >>> shift ) << shift;

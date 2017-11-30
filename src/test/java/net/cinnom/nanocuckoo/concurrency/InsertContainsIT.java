@@ -15,16 +15,14 @@
  */
 package net.cinnom.nanocuckoo.concurrency;
 
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.Assert;
-import org.junit.Test;
-
-import net.cinnom.nanocuckoo.ConcurrentSwapSafety;
-import net.cinnom.nanocuckoo.NanoCuckooFilter;
 
 /**
  * Insert/Contains concurrency test.
@@ -38,8 +36,7 @@ public class InsertContainsIT {
 		final int capacity = 10_000_000;
 		final String containedString = "abcdefghijklmn-opqrstuvwxyz-000000";
 
-		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity )
-				.withConcurrentSwapSafety( ConcurrentSwapSafety.RELIABLE ).withFingerprintBits( 7 ).build();
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withFingerprintBits( 7 ).build();
 
 		final AtomicInteger currentRun = new AtomicInteger();
 

@@ -30,14 +30,14 @@ public class IntUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean counting = false;
 
-		final IntUnsafeBuckets intUnsafeBuckets = new IntUnsafeBuckets( entries, buckets, counting );
+		final IntUnsafeBuckets intUnsafeBuckets = new IntUnsafeBuckets( entries, buckets, counting, 0 );
 
-		for(int e = 0; e < entries; e++) {
-			for(int b = 0; b < buckets; b++) {
+		for ( int e = 0; e < entries; e++ ) {
+			for ( int b = 0; b < buckets; b++ ) {
 
-				int value = (23 + e * b);
+				int value = ( 23 + e * b );
 				intUnsafeBuckets.putValue( e, b, value );
-				Assert.assertEquals(value, intUnsafeBuckets.getValue( e, b ));
+				Assert.assertEquals( value, intUnsafeBuckets.getValue( e, b ) );
 			}
 		}
 
@@ -51,16 +51,16 @@ public class IntUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean counting = false;
 
-		for(int fp = 1; fp <= 32; fp++) {
+		for ( int fp = 1; fp <= 32; fp++ ) {
 
-			final IntUnsafeBuckets intUnsafeBuckets = new IntUnsafeBuckets( entries, buckets, counting );
+			final IntUnsafeBuckets intUnsafeBuckets = new IntUnsafeBuckets( entries, buckets, counting, 0 );
 
 			for ( int e = 0; e < entries; e++ ) {
 				for ( int b = 0; b < buckets; b++ ) {
 
-					int fpMask = -1 >>> (32 - fp);
+					int fpMask = -1 >>> ( 32 - fp );
 					int value = ( 1023 + e * b ) & fpMask;
-					int swapValue = (value + 999) & fpMask;
+					int swapValue = ( value + 999 ) & fpMask;
 					intUnsafeBuckets.putValue( e, b, value );
 					Assert.assertEquals( value, intUnsafeBuckets.swap( e, b, swapValue ) );
 					Assert.assertEquals( swapValue, intUnsafeBuckets.getValue( e, b ) );

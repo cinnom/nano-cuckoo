@@ -15,18 +15,17 @@
  */
 package net.cinnom.nanocuckoo;
 
+import net.cinnom.nanocuckoo.encode.StringEncoder;
+import net.cinnom.nanocuckoo.hash.BucketHasher;
+import net.cinnom.nanocuckoo.hash.FingerprintHasher;
+import org.junit.Assert;
+import org.junit.Test;
+
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import org.junit.Assert;
-import org.junit.Test;
-
-import net.cinnom.nanocuckoo.encode.StringEncoder;
-import net.cinnom.nanocuckoo.hash.BucketHasher;
-import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 
 /**
  * NanoCuckooFilter tests. These are really integration tests, but it runs quickly enough to be a unit test. I'll
@@ -40,7 +39,8 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		// Use Builder to create a NanoCuckooFilter. Only required parameter is capacity.
-		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withCountingEnabled( true ) // Enable counting
+		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity )
+				.withCountingEnabled( true ) // Enable counting
 				.build();
 
 		Assert.assertEquals( capacity, cuckooFilter.getCapacity() );
@@ -66,7 +66,8 @@ public class NanoCuckooFilterTest {
 		cuckooFilter.insert( testValue );
 
 		// Get a count of how many times the value is in the filter
-		int insertedCount = cuckooFilter.count( testValue ); // Returns 3 since we inserted three times with counting enabled
+		int insertedCount = cuckooFilter
+				.count( testValue ); // Returns 3 since we inserted three times with counting enabled
 
 		Assert.assertEquals( 3, insertedCount );
 
@@ -76,11 +77,13 @@ public class NanoCuckooFilterTest {
 		Assert.assertTrue( wasDeleted );
 
 		// Try to delete the value up to six more times
-		int deletedCount = cuckooFilter.delete( testValue, 6 ); // Returns 2 since only two copies of the value were left
+		int deletedCount = cuckooFilter
+				.delete( testValue, 6 ); // Returns 2 since only two copies of the value were left
 
 		Assert.assertEquals( 2, deletedCount );
 
-		isValueInFilter = cuckooFilter.contains( testValue ); // Returns false since all copies of the value were deleted
+		isValueInFilter = cuckooFilter
+				.contains( testValue ); // Returns false since all copies of the value were deleted
 
 		Assert.assertFalse( isValueInFilter );
 
@@ -99,7 +102,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
-				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
+				.withCountingEnabled( true ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
 			cuckooFilter.insert( 16384 );
@@ -115,7 +118,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
-				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
+				.withCountingEnabled( true ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
 			Assert.assertTrue( cuckooFilter.insert( 0 ) );
@@ -131,8 +134,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
-				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST )
-				.withFingerprintBits( 32 ).build();
+				.withCountingEnabled( true ).withFingerprintBits( 32 ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
 			Assert.assertTrue( cuckooFilter.insert( i ) );
@@ -178,7 +180,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 1024L;
 
 		when( unsafeBuckets.getInsertedCount() ).thenReturn( insertedCount );
-		when( unsafeBuckets.getCapacity() ).thenReturn( capacity );
+		when( unsafeBuckets.getTotalCapacity() ).thenReturn( capacity );
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( 8, bucketHasher, fingerprintHasher, stringEncoder,
 				kickedValues, unsafeBuckets, bucketLocker, swapper );

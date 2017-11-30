@@ -30,13 +30,13 @@ public class ByteUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean counting = false;
 
-		final ByteUnsafeBuckets byteUnsafeBuckets = new ByteUnsafeBuckets( entries, buckets, counting );
+		final ByteUnsafeBuckets byteUnsafeBuckets = new ByteUnsafeBuckets( entries, buckets, counting, 0 );
 
 		for ( int e = 0; e < entries; e++ ) {
 			for ( int b = 0; b < buckets; b++ ) {
 
-				int value = (23 + e * b);
-				int swapValue = (value + 5);
+				int value = ( 23 + e * b );
+				int swapValue = ( value + 5 );
 				byteUnsafeBuckets.putValue( e, b, value );
 				Assert.assertEquals( value, byteUnsafeBuckets.swap( e, b, swapValue ) );
 				Assert.assertEquals( swapValue, byteUnsafeBuckets.getValue( e, b ) );
@@ -51,14 +51,14 @@ public class ByteUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean counting = false;
 
-		final ByteUnsafeBuckets byteUnsafeBuckets = new ByteUnsafeBuckets( entries, buckets, counting );
+		final ByteUnsafeBuckets byteUnsafeBuckets = new ByteUnsafeBuckets( entries, buckets, counting, 0 );
 
-		for(int e = 0; e < entries; e++) {
-			for(int b = 0; b < buckets; b++) {
+		for ( int e = 0; e < entries; e++ ) {
+			for ( int b = 0; b < buckets; b++ ) {
 
-				int value = (23 + e * b);
+				int value = ( 23 + e * b );
 				byteUnsafeBuckets.putValue( e, b, value );
-				Assert.assertEquals(value, byteUnsafeBuckets.getValue( e, b ));
+				Assert.assertEquals( value, byteUnsafeBuckets.getValue( e, b ) );
 			}
 		}
 

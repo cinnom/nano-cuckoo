@@ -15,13 +15,12 @@
  */
 package net.cinnom.nanocuckoo.concurrency;
 
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import net.cinnom.nanocuckoo.ConcurrentSwapSafety;
-import net.cinnom.nanocuckoo.NanoCuckooFilter;
-import org.junit.Test;
 
 /**
  * Informal performance/multithreading test.
@@ -37,7 +36,7 @@ public class PerformanceIT {
 		final String notContainedString = "abcdefghijklmn-opqrstuvwxyz-111111";
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withCountingEnabled( true )
-				.withConcurrentSwapSafety( ConcurrentSwapSafety.SMART ).withFingerprintBits( 7 ).build();
+				.withFingerprintBits( 7 ).build();
 
 		System.out.println( "Memory usage bytes: " + cuckooFilter.getMemoryUsageBytes() );
 		System.out.println( "Capacity: " + cuckooFilter.getCapacity() );

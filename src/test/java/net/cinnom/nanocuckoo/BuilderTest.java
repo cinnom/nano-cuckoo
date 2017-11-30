@@ -77,103 +77,6 @@ public class BuilderTest {
 	}
 
 	@Test
-	public void invalidConcurrentSwapSafetyTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withConcurrentSwapSafety( null );
-			Assert.assertTrue( false );
-		} catch ( IllegalArgumentException ex ) {
-		}
-	}
-
-	@Test
-	public void validConcurrentSwapSafetyFastTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withConcurrentSwapSafety( ConcurrentSwapSafety.FAST );
-		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
-		}
-
-		builder.build();
-	}
-
-	@Test
-	public void validConcurrentSwapSafetyReliableTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withConcurrentSwapSafety( ConcurrentSwapSafety.RELIABLE );
-		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
-		}
-
-		builder.build();
-	}
-
-	@Test
-	public void validConcurrentSwapSafetySmartTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withConcurrentSwapSafety( ConcurrentSwapSafety.SMART );
-		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
-		}
-
-		builder.build();
-	}
-
-	@Test
-	public void invalidSmartInsertLoadFactorHighTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withSmartInsertLoadFactor( 1.01 );
-			Assert.assertTrue( false );
-		} catch ( IllegalArgumentException ex ) {
-		}
-	}
-
-	@Test
-	public void invalidSmartInsertLoadFactorLowTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withSmartInsertLoadFactor( -0.01 );
-			Assert.assertTrue( false );
-		} catch ( IllegalArgumentException ex ) {
-		}
-	}
-
-	@Test
-	public void validSmartInsertLoadFactorTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withSmartInsertLoadFactor( 0.63 );
-		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
-		}
-	}
-
-	@Test
 	public void invalidFingerprintBitsLowTest() {
 
 		int capacity = 32;
@@ -280,21 +183,6 @@ public class BuilderTest {
 
 		try {
 			builder.withMaxKicks( 33 );
-		} catch ( IllegalArgumentException ex ) {
-			Assert.assertTrue( false );
-		}
-	}
-
-	@Test
-	public void validRandomSeedTest() {
-
-		int capacity = 32;
-		NanoCuckooFilter.Builder builder = new NanoCuckooFilter.Builder( capacity );
-
-		try {
-			builder.withRandomSeed( Integer.MAX_VALUE );
-			builder.withRandomSeed( Integer.MIN_VALUE);
-			builder.withRandomSeed( 0 );
 		} catch ( IllegalArgumentException ex ) {
 			Assert.assertTrue( false );
 		}
