@@ -16,7 +16,10 @@
 package net.cinnom.nanocuckoo.encode;
 
 /**
- * StringEncoder for encoding ASCII Strings.
+ * StringEncoder for encoding ASCII Strings. This encoder will only work with Strings containing ASCII characters.
+ * <p>
+ * Performance on this encoder is similar to {@link UTF16LEEncoder} for ASCII data.
+ * </p>
  */
 public class ASCIIEncoder implements StringEncoder {
 

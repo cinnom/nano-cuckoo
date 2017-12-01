@@ -18,7 +18,11 @@ package net.cinnom.nanocuckoo.encode;
 import java.nio.charset.StandardCharsets;
 
 /**
- * StringEncoder for encoding UTF-8 Strings.
+ * StringEncoder for encoding UTF-8 Strings. This encoder should work for any String.
+ * <p>
+ * Performance on this encoder is generally worse than any other encoders; {@link UTF16LEEncoder} should be used
+ * instead.
+ * </p>
  */
 public class UTF8Encoder implements StringEncoder {
 

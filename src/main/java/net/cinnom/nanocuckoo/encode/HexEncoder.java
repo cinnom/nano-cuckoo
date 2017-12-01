@@ -16,13 +16,17 @@
 package net.cinnom.nanocuckoo.encode;
 
 /**
- * StringEncoder for encoding Hexadecimal Strings.
+ * StringEncoder for encoding Hexadecimal Strings. This encoder will only work with Strings containing Hexadecimal
+ * characters (0123456789abcdefABCDEF).
+ * <p>
+ * Performance on this encoder is good for Strings around 40 characters or less.
+ * </p>
  */
 public class HexEncoder implements StringEncoder {
 
 	/**
 	 * Encode a String into Hexadecimal value bytes. This method assumes that the input is a valid Hexadecimal String;
-	 * no validation is performed on the input.
+	 * no validation is performed on the input. Input should have an even number of characters.
 	 *
 	 * @param data
 	 *            String to encode.

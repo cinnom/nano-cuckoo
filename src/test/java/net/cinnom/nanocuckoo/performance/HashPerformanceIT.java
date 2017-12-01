@@ -1,4 +1,4 @@
-package net.cinnom.nanocuckoo.hash;
+package net.cinnom.nanocuckoo.performance;
 
 import org.junit.Test;
 
@@ -7,7 +7,7 @@ import net.cinnom.nanocuckoo.metro.UnsafeMetroHash64;
 import net.jpountz.xxhash.XXHashFactory;
 
 /**
- * Various hash performance tests. Spoiler: Unsafe is much faster than safe.
+ * Informal hash performance tests. Spoiler: Unsafe is much faster than safe.
  */
 public class HashPerformanceIT {
 

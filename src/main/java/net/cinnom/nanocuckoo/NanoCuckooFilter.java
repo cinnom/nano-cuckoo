@@ -23,7 +23,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 
 import net.cinnom.nanocuckoo.encode.StringEncoder;
-import net.cinnom.nanocuckoo.encode.UTF8Encoder;
+import net.cinnom.nanocuckoo.encode.UTF16LEEncoder;
 import net.cinnom.nanocuckoo.hash.BucketHasher;
 import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
@@ -667,7 +667,7 @@ public class NanoCuckooFilter implements Serializable {
 		private int maxKicks = 400;
 		private int concurrency = 64;
 		private boolean countingEnabled = false;
-		private StringEncoder stringEncoder = new UTF8Encoder();
+		private StringEncoder stringEncoder = new UTF16LEEncoder();
 		private BucketHasher bucketHasher = new XXHasher( DEFAULT_SEED );
 		private FingerprintHasher fpHasher = new FixedHasher();
 		private RandomInt randomInt = new WrappedThreadLocalRandom();
@@ -800,7 +800,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Used by String insert/contains/count/delete.
 		 * </p>
 		 * <p>
-		 * Defaults to UTF8Encoder.
+		 * Defaults to {@link UTF16LEEncoder}.
 		 * </p>
 		 *
 		 * @param stringEncoder
@@ -822,7 +822,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Set bucket hasher.
 		 * </p>
 		 * <p>
-		 * Defaults to 64-bit XXHasher with a seed of 0x48F7E28A.
+		 * Defaults to {@link XXHasher} with a seed of {@value #DEFAULT_SEED}.
 		 * </p>
 		 *
 		 * @param bucketHasher
@@ -844,7 +844,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Set fingerprint hasher.
 		 * </p>
 		 * <p>
-		 * Defaults to 64-bit FixedHasher.
+		 * Defaults to {@link FixedHasher}.
 		 * </p>
 		 *
 		 * @param fpHasher
@@ -918,7 +918,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Set random int provider.
 		 * </p>
 		 * <p>
-		 * Defaults to wrapped ThreadLocalRandom.
+		 * Defaults to {@link WrappedThreadLocalRandom}.
 		 * </p>
 		 *
 		 * @param randomInt
