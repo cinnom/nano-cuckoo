@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import net.cinnom.nanocuckoo.encode.UnsafeEncoder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,10 +44,12 @@ import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
 public class SerializationTest {
 
 	private static final byte CUSTOM_TYPE = 0;
+
 	private static final byte UTF8_ENCODER_TYPE = 1;
 	private static final byte UTF16LE_ENCODER_TYPE = 2;
 	private static final byte ASCII_ENCODER_TYPE = 3;
 	private static final byte HEX_ENCODER_TYPE = 4;
+	private static final byte UNSAFE_ENCODER_TYPE = 5;
 
 	private static final byte XXHASHER_BUCKET_HASHER_TYPE = 1;
 	private static final byte METROHASHER_BUCKET_HASHER_TYPE = 2;
@@ -167,7 +170,7 @@ public class SerializationTest {
 	public void customStringEncoderTypeTest() {
 
 		Assert.assertEquals( CUSTOM_TYPE, serialization.getStringEncoderType( new DumbStringEncoder() ) );
-		Assert.assertTrue( serialization.createStringEncoder( CUSTOM_TYPE ) instanceof UTF8Encoder );
+		Assert.assertTrue( serialization.createStringEncoder( CUSTOM_TYPE ) instanceof UTF16LEEncoder );
 	}
 
 	@Test
@@ -189,6 +192,13 @@ public class SerializationTest {
 
 		Assert.assertEquals( UTF8_ENCODER_TYPE, serialization.getStringEncoderType( new UTF8Encoder() ) );
 		Assert.assertTrue( serialization.createStringEncoder( UTF8_ENCODER_TYPE ) instanceof UTF8Encoder );
+	}
+
+	@Test
+	public void unsafeStringEncoderTypeTest() {
+
+		Assert.assertEquals( UNSAFE_ENCODER_TYPE, serialization.getStringEncoderType( new UnsafeEncoder() ) );
+		Assert.assertTrue( serialization.createStringEncoder( UNSAFE_ENCODER_TYPE ) instanceof UnsafeEncoder );
 	}
 
 	@Test

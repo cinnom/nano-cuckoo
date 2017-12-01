@@ -5,6 +5,7 @@ import net.cinnom.nanocuckoo.encode.HexEncoder;
 import net.cinnom.nanocuckoo.encode.StringEncoder;
 import net.cinnom.nanocuckoo.encode.UTF16LEEncoder;
 import net.cinnom.nanocuckoo.encode.UTF8Encoder;
+import net.cinnom.nanocuckoo.encode.UnsafeEncoder;
 import net.cinnom.nanocuckoo.hash.BucketHasher;
 import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
@@ -24,6 +25,7 @@ class Serialization {
 	private static final byte UTF16LE_ENCODER_TYPE = 2;
 	private static final byte ASCII_ENCODER_TYPE = 3;
 	private static final byte HEX_ENCODER_TYPE = 4;
+	private static final byte UNSAFE_ENCODER_TYPE = 5;
 
 	private static final byte XXHASHER_BUCKET_HASHER_TYPE = 1;
 	private static final byte METROHASHER_BUCKET_HASHER_TYPE = 2;
@@ -51,6 +53,9 @@ class Serialization {
 		if ( stringEncoder instanceof HexEncoder ) {
 			return HEX_ENCODER_TYPE;
 		}
+		if ( stringEncoder instanceof UnsafeEncoder ) {
+			return UNSAFE_ENCODER_TYPE;
+		}
 		return CUSTOM_TYPE;
 	}
 
@@ -61,11 +66,13 @@ class Serialization {
 				return new ASCIIEncoder();
 			case HEX_ENCODER_TYPE:
 				return new HexEncoder();
-			case UTF16LE_ENCODER_TYPE:
-				return new UTF16LEEncoder();
 			case UTF8_ENCODER_TYPE:
-			default:
 				return new UTF8Encoder();
+			case UNSAFE_ENCODER_TYPE:
+				return new UnsafeEncoder();
+			case UTF16LE_ENCODER_TYPE:
+			default:
+				return new UTF16LEEncoder();
 		}
 	}
 
