@@ -15,25 +15,19 @@
  */
 package net.cinnom.nanocuckoo.hash;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
-
 import net.jpountz.xxhash.XXHashFactory;
 
 /**
  * XXHash 64-bit bucket hasher. Very fast (non-cryptographic) hash with a good distribution.
  */
-public class XXHasher implements BucketHasher, Serializable {
-
-	private static final long serialVersionUID = 1L;
+public class XXHasher implements BucketHasher {
 
 	private final int seed;
-	private transient XXHashFactory factory = XXHashFactory.unsafeInstance();
+	private XXHashFactory factory = XXHashFactory.unsafeInstance();
 
 	/**
 	 * Instantiate the XXHasher with the given random seed.
-	 * 
+	 *
 	 * @param seed
 	 *            Random seed.
 	 */
@@ -44,7 +38,7 @@ public class XXHasher implements BucketHasher, Serializable {
 
 	/**
 	 * Get 64-bit bucket hash using XXHash.
-	 * 
+	 *
 	 * @param data
 	 *            Data to hash.
 	 * @return 64-bit hash.
@@ -55,9 +49,9 @@ public class XXHasher implements BucketHasher, Serializable {
 		return factory.hash64().hash( data, 0, data.length, seed );
 	}
 
-	private void readObject( ObjectInputStream in ) throws IOException, ClassNotFoundException {
+	@Override
+	public int getSeed() {
 
-		in.defaultReadObject();
-		factory = XXHashFactory.fastestInstance();
+		return seed;
 	}
 }

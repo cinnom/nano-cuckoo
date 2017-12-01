@@ -20,7 +20,7 @@ Maven
 <dependency>
     <groupId>net.cinnom</groupId>
     <artifactId>nano-cuckoo</artifactId>
-    <version>1.0.1</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -78,43 +78,9 @@ public class CuckooTest {
 
 Serialization
 =====
-```java
-import net.cinnom.nanocuckoo.NanoCuckooFilter;
-import java.io.*;
+Standard Java serialization is supported. Any custom implementations for StringEncoder, BucketHasher, FingerprintHasher, or RandomInt should be serializable, or filter serialization will fail.
 
-public class CuckooTest {
-	
-    public void serializationTest() throws IOException, ClassNotFoundException {
-    
-        // Create a filter
-        NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( 32 ).build();
-        
-        String testValue = "test value";
-        
-        // Insert a value into the filter
-        cuckooFilter.insert( testValue );
-        
-        // Serialize the filter to a byte array
-        ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream( byteOutputStream );
-        objectOutputStream.writeObject( cuckooFilter );
-        byte[] serializedBytes = byteOutputStream.toByteArray();
-        
-        // Close the current filter before replacing it (optional)
-        cuckooFilter.close();
-        
-        // Read the serialized filter in from the byte array
-        ByteArrayInputStream byteInputStream = new ByteArrayInputStream( serializedBytes );
-        ObjectInputStream objectInputStream = new ObjectInputStream( byteInputStream );
-        cuckooFilter = (NanoCuckooFilter) objectInputStream.readObject();
-        
-        boolean isValueInFilter = cuckooFilter.contains( testValue ); // Returns true
-        
-        // Close the filter (optional)
-        cuckooFilter.close();
-    }
-}
-```
+In addition, readMemory and writeMemory can be used to directly dump and replace filter memory. The source and destination filters for readMemory and writeMemory should be built with the same parameters.
 
 Configuration
 =====
@@ -126,4 +92,4 @@ Currently, only String, byte[], and long (pre-hashed value) types can be inserte
 
 Multithreading
 =====
-Multithreaded insert/delete/contains/count are supported. Bucket expansion and serialization will lock all buckets until they are finished.
+Multithreaded insert/delete/contains/count are supported. Bucket expansion and serialization (including readMemory and writeMemory) will lock all buckets until they are finished.

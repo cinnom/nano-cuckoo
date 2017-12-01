@@ -16,17 +16,20 @@
 package net.cinnom.nanocuckoo;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.SplittableRandom;
 
 import net.cinnom.nanocuckoo.encode.StringEncoder;
-import net.cinnom.nanocuckoo.encode.UTF8Encoder;
+import net.cinnom.nanocuckoo.encode.UTF16LEEncoder;
 import net.cinnom.nanocuckoo.hash.BucketHasher;
 import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
 import net.cinnom.nanocuckoo.hash.XXHasher;
+import net.cinnom.nanocuckoo.random.RandomInt;
+import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
 import sun.misc.Cleaner;
 
 /**
@@ -41,25 +44,23 @@ import sun.misc.Cleaner;
  */
 public class NanoCuckooFilter implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 2L;
 
-	private static final int BITS_PER_BYTE = 8;
-	private static final int BITS_PER_SHORT = 16;
 	private static final int BITS_PER_INT = 32;
 	private static final int BITS_PER_LONG = 64;
 
-	private final UnsafeBuckets buckets;
-	private final StringEncoder stringEncoder;
-	private final BucketHasher bucketHasher;
-	private final FingerprintHasher fpHasher;
+	private int fpBits;
+	private transient int fpPerLong;
+	private transient int fpMask;
 
-	private final int fpBits;
-	private final int fpPerLong;
-	private final int fpMask;
+	private transient UnsafeBuckets buckets;
+	private transient StringEncoder stringEncoder;
+	private transient BucketHasher bucketHasher;
+	private transient FingerprintHasher fpHasher;
 
-	private final KickedValues kickedValues;
-	private final BucketLocker bucketLocker;
-	private final Swapper swapper;
+	private transient KickedValues kickedValues;
+	private transient BucketLocker bucketLocker;
+	private transient Swapper swapper;
 
 	private transient Cleaner cleaner;
 
@@ -75,6 +76,11 @@ public class NanoCuckooFilter implements Serializable {
 		this.fpBits = fpBits;
 		this.bucketLocker = bucketLocker;
 		this.swapper = swapper;
+
+		initialize();
+	}
+
+	private void initialize() {
 
 		// Set how many potential fingerprints we can locate in a bucket hash
 		fpPerLong = BITS_PER_LONG / fpBits;
@@ -374,7 +380,7 @@ public class NanoCuckooFilter implements Serializable {
 
 	/**
 	 * Get native memory bytes used by filter.
-	 * 
+	 *
 	 * @return Native memory bytes used by filter.
 	 */
 	public long getMemoryUsageBytes() {
@@ -384,22 +390,22 @@ public class NanoCuckooFilter implements Serializable {
 
 	/**
 	 * Get filter maximum capacity.
-	 * 
+	 *
 	 * @return Filter maximum capacity.
 	 */
 	public long getCapacity() {
 
-		return buckets.getCapacity();
+		return buckets.getTotalCapacity();
 	}
 
 	/**
 	 * Get filter load factor (inserted count / capacity).
-	 * 
+	 *
 	 * @return Filter load factor.
 	 */
 	public double getLoadFactor() {
 
-		return (double) buckets.getInsertedCount() / buckets.getCapacity();
+		return (double) buckets.getInsertedCount() / buckets.getTotalCapacity();
 	}
 
 	/**
@@ -485,15 +491,147 @@ public class NanoCuckooFilter implements Serializable {
 
 	private void readObject( ObjectInputStream in ) throws IOException, ClassNotFoundException {
 
-		in.defaultReadObject();
+		final Serialization serialization = new Serialization();
 
-		cleaner = Cleaner.create( this, new Deallocator( buckets ) );
+		// Create buckets
+		fpBits = in.readInt();
+		buckets = UnsafeBuckets.createBuckets( fpBits, in.readInt(), in.readLong(), in.readBoolean(), in.readLong() );
+		buckets.readMemory( in );
+
+		// Create kicked values
+		kickedValues = new KickedValues();
+		kickedValues.setKickedFingerprint( in.readInt() );
+		kickedValues.setKickedBucket( in.readLong() );
+
+		// Create bucket locker
+		final int concurrency = in.readInt();
+		bucketLocker = new BucketLocker( concurrency, concurrency );
+
+		// Create swapper
+		int maxKicks = in.readInt();
+		// Create random int provider
+		final byte randomIntType = in.readByte();
+		RandomInt randomInt;
+		if ( randomIntType > 0 ) {
+			randomInt = serialization.createRandomInt( randomIntType );
+		} else {
+			randomInt = (RandomInt) in.readObject();
+		}
+		swapper = new Swapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, randomInt );
+
+		// Create string encoder
+		final byte stringEncoderType = in.readByte();
+		if ( stringEncoderType > 0 ) {
+			stringEncoder = serialization.createStringEncoder( stringEncoderType );
+		} else {
+			stringEncoder = (StringEncoder) in.readObject();
+		}
+
+		// Create bucket hasher
+		final byte bucketHasherType = in.readByte();
+		if ( bucketHasherType > 0 ) {
+			bucketHasher = serialization.createBucketHasher( bucketHasherType, in.readInt() );
+		} else {
+			bucketHasher = (BucketHasher) in.readObject();
+		}
+
+		// Create fingerprint hasher
+		final byte fpHasherType = in.readByte();
+		if ( fpHasherType > 0 ) {
+			fpHasher = serialization.createFingerprintHasher( fpHasherType );
+		} else {
+			fpHasher = (FingerprintHasher) in.readObject();
+		}
+
+		initialize();
 	}
 
 	private void writeObject( ObjectOutputStream out ) throws IOException {
 
 		bucketLocker.lockAllBuckets();
-		out.defaultWriteObject();
+
+		final Serialization serialization = new Serialization();
+
+		// Write bucket values
+		out.writeInt( fpBits );
+		out.writeInt( buckets.getEntriesPerBucket() );
+		out.writeLong( buckets.getBucketCount() );
+		out.writeBoolean( buckets.isCountingDisabled() );
+		out.writeLong( buckets.getInsertedCount() );
+		buckets.writeMemory( out );
+
+		// Write kicked values
+		out.writeInt( kickedValues.getKickedFingerprint() );
+		out.writeLong( kickedValues.getKickedBucket() );
+
+		// Write bucket locker values
+		out.writeInt( bucketLocker.getConcurrency() );
+
+		// Write swapper values
+		out.writeInt( swapper.getMaxKicks() );
+		// Write random int provider
+		final byte randomIntType = serialization.getRandomIntType( swapper.getRandomInt() );
+		out.writeByte( randomIntType );
+		if ( serialization.isCustomType( randomIntType ) ) {
+			out.writeObject( swapper.getRandomInt() );
+		}
+
+		// Write string encoder
+		final byte stringEncoderType = serialization.getStringEncoderType( stringEncoder );
+		out.writeByte( stringEncoderType );
+		if ( serialization.isCustomType( stringEncoderType ) ) {
+			out.writeObject( stringEncoder );
+		}
+
+		// Write bucket hasher
+		final byte bucketHasherType = serialization.getBucketHasherType( bucketHasher );
+		out.writeByte( bucketHasherType );
+		if ( serialization.isCustomType( bucketHasherType ) ) {
+			out.writeObject( bucketHasher );
+		} else {
+			out.writeInt( bucketHasher.getSeed() );
+		}
+
+		// Write fingerprint hasher
+		final byte fpHasherType = serialization.getFingerprintHasherType( fpHasher );
+		out.writeByte( fpHasherType );
+		if ( serialization.isCustomType( fpHasherType ) ) {
+			out.writeObject( fpHasher );
+		}
+
+		bucketLocker.unlockAllBuckets();
+	}
+
+	/**
+	 * Write the filter's internal memory to the given OutputStream. To be used in conjunction with
+	 * {@link NanoCuckooFilter#readMemory(InputStream)}.
+	 *
+	 * @param outputStream
+	 *            Output stream to write memory to.
+	 * @throws IOException
+	 *             Thrown by OutputStream.
+	 */
+	public void writeMemory( OutputStream outputStream ) throws IOException {
+
+		bucketLocker.lockAllBuckets();
+		buckets.writeMemory( outputStream );
+		bucketLocker.unlockAllBuckets();
+	}
+
+	/**
+	 * Overwrite the internal filter memory. This should only be used in conjunction with
+	 * {@link NanoCuckooFilter#writeMemory(OutputStream)}, and the filters' capacity, entries per bucket, and
+	 * fingerprint size should match.
+	 *
+	 * @param inputStream
+	 *            Input stream to read memory from.
+	 * @throws IOException
+	 *             Thrown by InputStream.
+	 */
+	public void readMemory( InputStream inputStream ) throws IOException {
+
+		bucketLocker.lockAllBuckets();
+		buckets.readMemory( inputStream );
 		bucketLocker.unlockAllBuckets();
 	}
 
@@ -522,18 +660,17 @@ public class NanoCuckooFilter implements Serializable {
 	public static class Builder {
 
 		private static final int POS_INT = 0x7FFFFFFF;
+		public static final int DEFAULT_SEED = 0x48F7E28A;
 		private final long capacity;
 		private int entriesPerBucket = 4;
 		private int fpBits = 8;
 		private int maxKicks = 400;
-		private int seed = 0x48F7E28A;
 		private int concurrency = 64;
 		private boolean countingEnabled = false;
-		private double smartInsertLoadFactor = 0.90;
-		private ConcurrentSwapSafety concurrentSwapSafety = ConcurrentSwapSafety.RELIABLE;
-		private StringEncoder stringEncoder = new UTF8Encoder();
-		private BucketHasher bucketHasher = new XXHasher( seed );
+		private StringEncoder stringEncoder = new UTF16LEEncoder();
+		private BucketHasher bucketHasher = new XXHasher( DEFAULT_SEED );
 		private FingerprintHasher fpHasher = new FixedHasher();
+		private RandomInt randomInt = new WrappedThreadLocalRandom();
 
 		/**
 		 * <p>
@@ -542,7 +679,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * <p>
 		 * The number of internal buckets will be (capacity / entries per bucket), scaled up to a power of 2.
 		 * </p>
-		 * 
+		 *
 		 * @param capacity
 		 *            Desired filter capacity.
 		 */
@@ -569,47 +706,11 @@ public class NanoCuckooFilter implements Serializable {
 
 			final long bucketCount = (long) Math.ceil( (double) capacity / entriesPerBucket );
 
-			UnsafeBuckets buckets;
-
-			switch ( fpBits ) {
-				case BITS_PER_BYTE:
-					buckets = new ByteUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
-					break;
-				case BITS_PER_SHORT:
-					buckets = new ShortUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
-					break;
-				case BITS_PER_INT:
-					buckets = new IntUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled );
-					break;
-				default:
-					buckets = new VariableUnsafeBuckets( entriesPerBucket, bucketCount, fpBits, countingDisabled );
-					break;
-			}
-
+			final UnsafeBuckets buckets = UnsafeBuckets.createBuckets( fpBits, entriesPerBucket, bucketCount,
+					countingDisabled, 0 );
 			final KickedValues kickedValues = new KickedValues();
 			final BucketLocker bucketLocker = new BucketLocker( concurrency, buckets.getBucketCount() );
-			Swapper swapper;
-
-			final SplittableRandom random = new SplittableRandom( seed );
-
-			switch ( concurrentSwapSafety ) {
-
-				case FAST:
-					swapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed, random );
-					break;
-				case SMART:
-					Swapper fastSwapper = new FastSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks,
-							seed, random );
-					Swapper reliableSwapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher,
-							maxKicks, seed, random );
-					swapper = new SmartSwapper( fastSwapper, reliableSwapper, buckets, smartInsertLoadFactor );
-					break;
-				case RELIABLE:
-				default:
-					swapper = new ReliableSwapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, seed,
-							random );
-					break;
-			}
+			final Swapper swapper = new Swapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, randomInt );
 
 			return new NanoCuckooFilter( fpBits, bucketHasher, fpHasher, stringEncoder, kickedValues, buckets,
 					bucketLocker, swapper );
@@ -637,56 +738,6 @@ public class NanoCuckooFilter implements Serializable {
 			}
 
 			this.entriesPerBucket = entriesPerBucket;
-			return this;
-		}
-
-		/**
-		 * <p>
-		 * Set concurrent swap safety.
-		 * </p>
-		 * <p>
-		 * The {@link ConcurrentSwapSafety} enum describes the levels available.
-		 * </p>
-		 * <p>
-		 * Defaults to ConcurrentSwapSafety.RELIABLE.
-		 * </p>
-		 *
-		 * @param concurrentSwapSafety
-		 *            Concurrent swap safety.
-		 * @return Updated Builder
-		 */
-		public Builder withConcurrentSwapSafety( ConcurrentSwapSafety concurrentSwapSafety ) {
-
-			if ( concurrentSwapSafety == null ) {
-				throw new IllegalArgumentException( "Concurrent Swap Safety must not be null" );
-			}
-
-			this.concurrentSwapSafety = concurrentSwapSafety;
-			return this;
-		}
-
-		/**
-		 * <p>
-		 * Set SMART insert load factor.
-		 * </p>
-		 * <p>
-		 * This is the maximum load factor to use for FAST inserts before switching to RELIABLE.
-		 * </p>
-		 * <p>
-		 * Must be between 0 and 1. Defaults to 0.90 (90%).
-		 * </p>
-		 *
-		 * @param smartInsertLoadFactor
-		 *            SMART insert load factor.
-		 * @return Updated Builder
-		 */
-		public Builder withSmartInsertLoadFactor( double smartInsertLoadFactor ) {
-
-			if ( smartInsertLoadFactor < 0 || smartInsertLoadFactor > 1 ) {
-				throw new IllegalArgumentException( "Smart Insert Load Factor must be between 0 and 1" );
-			}
-
-			this.smartInsertLoadFactor = smartInsertLoadFactor;
 			return this;
 		}
 
@@ -743,34 +794,13 @@ public class NanoCuckooFilter implements Serializable {
 
 		/**
 		 * <p>
-		 * Set random seed.
-		 * </p>
-		 * <p>
-		 * Used when randomly swapping entries.
-		 * </p>
-		 * <p>
-		 * Defaults to 0x48F7E28A.
-		 * </p>
-		 *
-		 * @param seed
-		 *            Random seed.
-		 * @return Updated Builder
-		 */
-		public Builder withRandomSeed( int seed ) {
-
-			this.seed = seed;
-			return this;
-		}
-
-		/**
-		 * <p>
 		 * Set String encoder.
 		 * </p>
 		 * <p>
 		 * Used by String insert/contains/count/delete.
 		 * </p>
 		 * <p>
-		 * Defaults to UTF8Encoder.
+		 * Defaults to {@link UTF16LEEncoder}.
 		 * </p>
 		 *
 		 * @param stringEncoder
@@ -792,7 +822,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Set bucket hasher.
 		 * </p>
 		 * <p>
-		 * Defaults to 64-bit XXHasher with a seed of 0x48F7E28A.
+		 * Defaults to {@link XXHasher} with a seed of {@value #DEFAULT_SEED}.
 		 * </p>
 		 *
 		 * @param bucketHasher
@@ -802,7 +832,7 @@ public class NanoCuckooFilter implements Serializable {
 		public Builder withBucketHasher( BucketHasher bucketHasher ) {
 
 			if ( bucketHasher == null ) {
-				throw new IllegalArgumentException( "Bucket BucketHasher must not be null" );
+				throw new IllegalArgumentException( "BucketHasher must not be null" );
 			}
 
 			this.bucketHasher = bucketHasher;
@@ -814,7 +844,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Set fingerprint hasher.
 		 * </p>
 		 * <p>
-		 * Defaults to 64-bit FixedHasher.
+		 * Defaults to {@link FixedHasher}.
 		 * </p>
 		 *
 		 * @param fpHasher
@@ -824,7 +854,7 @@ public class NanoCuckooFilter implements Serializable {
 		public Builder withFingerprintHasher( FingerprintHasher fpHasher ) {
 
 			if ( fpHasher == null ) {
-				throw new IllegalArgumentException( "Fingerprint BucketHasher must not be null" );
+				throw new IllegalArgumentException( "FingerprintHasher must not be null" );
 			}
 
 			this.fpHasher = fpHasher;
@@ -872,7 +902,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * <p>
 		 * Defaults to false.
 		 * </p>
-		 * 
+		 *
 		 * @param countingEnabled
 		 *            Counting enabled.
 		 * @return Updated Builder.
@@ -880,6 +910,28 @@ public class NanoCuckooFilter implements Serializable {
 		public Builder withCountingEnabled( boolean countingEnabled ) {
 
 			this.countingEnabled = countingEnabled;
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * Set random int provider.
+		 * </p>
+		 * <p>
+		 * Defaults to {@link WrappedThreadLocalRandom}.
+		 * </p>
+		 *
+		 * @param randomInt
+		 *            Random int provider.
+		 * @return Updated Builder
+		 */
+		public Builder withRandomInt( RandomInt randomInt ) {
+
+			if ( randomInt == null ) {
+				throw new IllegalArgumentException( "RandomInt must not be null" );
+			}
+
+			this.randomInt = randomInt;
 			return this;
 		}
 	}

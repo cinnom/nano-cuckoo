@@ -31,7 +31,7 @@ public class BucketLockerTest {
 
 		final BucketLocker bucketLocker = new BucketLocker( concurrency, buckets );
 
-		for(int i = 0; i < concurrency * 10; i++) {
+		for ( int i = 0; i < concurrency * 10; i++ ) {
 			bucketLocker.lockBucket( i );
 			bucketLocker.unlockBucket( i );
 		}
@@ -71,8 +71,8 @@ public class BucketLockerTest {
 
 		try {
 			bucketLocker.unlockBucket( 1 );
-			Assert.assertTrue( false );
-		} catch (IllegalMonitorStateException e) {
+			Assert.fail();
+		} catch ( IllegalMonitorStateException e ) {
 		}
 	}
 
@@ -86,8 +86,8 @@ public class BucketLockerTest {
 
 		try {
 			bucketLocker.unlockAllBuckets();
-			Assert.assertTrue( false );
-		} catch (IllegalMonitorStateException e) {
+			Assert.fail();
+		} catch ( IllegalMonitorStateException e ) {
 		}
 	}
 }

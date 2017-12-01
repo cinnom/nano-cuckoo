@@ -15,15 +15,12 @@
  */
 package net.cinnom.nanocuckoo;
 
-import java.io.Serializable;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Provides functionality for locking groups of buckets.
  */
-class BucketLocker implements Serializable {
-
-	private static final long serialVersionUID = 1L;
+class BucketLocker {
 
 	private final ReentrantLock[] bucketLocks;
 	private final int concurrencyBucketMask;
@@ -65,5 +62,10 @@ class BucketLocker implements Serializable {
 		for ( ReentrantLock bucketLock : bucketLocks ) {
 			bucketLock.unlock();
 		}
+	}
+
+	int getConcurrency() {
+
+		return concurrencyBucketMask + 1;
 	}
 }

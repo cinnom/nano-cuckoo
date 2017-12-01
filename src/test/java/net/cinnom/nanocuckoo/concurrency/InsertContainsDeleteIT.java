@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Assert;
 import org.junit.Test;
 
-import net.cinnom.nanocuckoo.ConcurrentSwapSafety;
 import net.cinnom.nanocuckoo.NanoCuckooFilter;
 
 /**
@@ -39,7 +38,7 @@ public class InsertContainsDeleteIT {
 		final String containedString = "abcdefghijklmn-opqrstuvwxyz-000000";
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withCountingEnabled( true )
-				.withConcurrentSwapSafety( ConcurrentSwapSafety.RELIABLE ).withFingerprintBits( 7 ).build();
+				.withFingerprintBits( 7 ).build();
 
 		final AtomicInteger currentRun = new AtomicInteger();
 

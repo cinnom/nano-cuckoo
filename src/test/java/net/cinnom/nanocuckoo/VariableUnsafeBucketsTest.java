@@ -30,14 +30,15 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = false;
 
-		for(int fp = 1; fp <= 32; fp++) {
+		for ( int fp = 1; fp <= 32; fp++ ) {
 
-			final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+			final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+					countingDisabled, 0 );
 
 			for ( int e = 0; e < entries; e++ ) {
 				for ( int b = 0; b < buckets; b++ ) {
 
-					int fpMask = -1 >>> (32 - fp);
+					int fpMask = -1 >>> ( 32 - fp );
 					int value = ( 1023 + e * b ) & fpMask;
 					varUnsafeBuckets.putValue( e, b, value );
 					Assert.assertEquals( value, varUnsafeBuckets.getValue( e, b ) );
@@ -53,16 +54,17 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = false;
 
-		for(int fp = 1; fp <= 32; fp++) {
+		for ( int fp = 1; fp <= 32; fp++ ) {
 
-			final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+			final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+					countingDisabled, 0 );
 
 			for ( int e = 0; e < entries; e++ ) {
 				for ( int b = 0; b < buckets; b++ ) {
 
-					int fpMask = -1 >>> (32 - fp);
+					int fpMask = -1 >>> ( 32 - fp );
 					int value = ( 1023 + e * b ) & fpMask;
-					int swapValue = (value + 999) & fpMask;
+					int swapValue = ( value + 999 ) & fpMask;
 					varUnsafeBuckets.putValue( e, b, value );
 					Assert.assertEquals( value, varUnsafeBuckets.swap( e, b, swapValue ) );
 					Assert.assertEquals( swapValue, varUnsafeBuckets.getValue( e, b ) );
@@ -79,13 +81,14 @@ public class VariableUnsafeBucketsTest {
 		long buckets = 33;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		buckets = 64;
 
 		long scaledUpCapacity = buckets * entries;
-		Assert.assertEquals( scaledUpCapacity, varUnsafeBuckets.getCapacity() );
-		Assert.assertEquals( (fp * scaledUpCapacity) / 8, varUnsafeBuckets.getMemoryUsageBytes() );
+		Assert.assertEquals( scaledUpCapacity, varUnsafeBuckets.getTotalCapacity() );
+		Assert.assertEquals( ( fp * scaledUpCapacity ) / 8, varUnsafeBuckets.getMemoryUsageBytes() );
 		Assert.assertEquals( buckets, varUnsafeBuckets.getBucketCount() );
 	}
 
@@ -97,7 +100,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		varUnsafeBuckets.incrementInsertedCount();
 		varUnsafeBuckets.incrementInsertedCount();
@@ -119,15 +123,16 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		varUnsafeBuckets.expand();
 		varUnsafeBuckets.expand();
 		entries *= 4;
 
 		long scaledUpCapacity = buckets * entries;
-		Assert.assertEquals( scaledUpCapacity, varUnsafeBuckets.getCapacity() );
-		Assert.assertEquals( (fp * scaledUpCapacity) / 8, varUnsafeBuckets.getMemoryUsageBytes() );
+		Assert.assertEquals( scaledUpCapacity, varUnsafeBuckets.getTotalCapacity() );
+		Assert.assertEquals( ( fp * scaledUpCapacity ) / 8, varUnsafeBuckets.getMemoryUsageBytes() );
 	}
 
 	@Test
@@ -138,7 +143,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -156,12 +162,13 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
 
-		varUnsafeBuckets.insert( bucket, value+1 );
+		varUnsafeBuckets.insert( bucket, value + 1 );
 
 		Assert.assertFalse( varUnsafeBuckets.contains( bucket, value ) );
 	}
@@ -174,7 +181,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -192,12 +200,13 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
 
-		varUnsafeBuckets.insert( bucket, value+1 );
+		varUnsafeBuckets.insert( bucket, value + 1 );
 
 		Assert.assertFalse( varUnsafeBuckets.delete( bucket, value ) );
 	}
@@ -210,7 +219,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = false;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -218,7 +228,7 @@ public class VariableUnsafeBucketsTest {
 		varUnsafeBuckets.insert( bucket, value );
 		varUnsafeBuckets.insert( bucket, value );
 		varUnsafeBuckets.insert( bucket, value );
-		varUnsafeBuckets.insert( bucket, value+1 );
+		varUnsafeBuckets.insert( bucket, value + 1 );
 		varUnsafeBuckets.delete( bucket, value );
 
 		Assert.assertEquals( 2, varUnsafeBuckets.count( bucket, value ) );
@@ -233,7 +243,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = false;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -241,7 +252,7 @@ public class VariableUnsafeBucketsTest {
 		varUnsafeBuckets.insert( bucket, value );
 		varUnsafeBuckets.insert( bucket, value );
 		varUnsafeBuckets.insert( bucket, value );
-		varUnsafeBuckets.insert( bucket, value+1 );
+		varUnsafeBuckets.insert( bucket, value + 1 );
 
 		Assert.assertEquals( 2, varUnsafeBuckets.deleteCount( bucket, value, 2 ) );
 		Assert.assertEquals( 2, varUnsafeBuckets.getInsertedCount() );
@@ -255,7 +266,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -276,7 +288,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -285,7 +298,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.insert( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -299,13 +312,14 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		varUnsafeBuckets.close();
 
 		try {
 			varUnsafeBuckets.expand();
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -319,7 +333,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -328,7 +343,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.contains( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -342,7 +357,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -351,7 +367,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.count( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -365,7 +381,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -374,7 +391,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.delete( bucket, value );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}
@@ -388,7 +405,8 @@ public class VariableUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean countingDisabled = true;
 
-		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp, countingDisabled );
+		final VariableUnsafeBuckets varUnsafeBuckets = new VariableUnsafeBuckets( entries, buckets, fp,
+				countingDisabled, 0 );
 
 		long bucket = 13;
 		int value = 2456;
@@ -397,7 +415,7 @@ public class VariableUnsafeBucketsTest {
 
 		try {
 			varUnsafeBuckets.deleteCount( bucket, value, 3 );
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( NullPointerException ex ) {
 
 		}

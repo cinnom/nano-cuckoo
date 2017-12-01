@@ -99,7 +99,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
-				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
+				.withCountingEnabled( true ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
 			cuckooFilter.insert( 16384 );
@@ -115,7 +115,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
-				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST ).build();
+				.withCountingEnabled( true ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
 			Assert.assertTrue( cuckooFilter.insert( 0 ) );
@@ -131,8 +131,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 32;
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withConcurrency( 1 )
-				.withCountingEnabled( true ).withConcurrentSwapSafety( ConcurrentSwapSafety.FAST )
-				.withFingerprintBits( 32 ).build();
+				.withCountingEnabled( true ).withFingerprintBits( 32 ).build();
 
 		for ( int i = 0; i < 9; i++ ) {
 			Assert.assertTrue( cuckooFilter.insert( i ) );
@@ -178,7 +177,7 @@ public class NanoCuckooFilterTest {
 		long capacity = 1024L;
 
 		when( unsafeBuckets.getInsertedCount() ).thenReturn( insertedCount );
-		when( unsafeBuckets.getCapacity() ).thenReturn( capacity );
+		when( unsafeBuckets.getTotalCapacity() ).thenReturn( capacity );
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter( 8, bucketHasher, fingerprintHasher, stringEncoder,
 				kickedValues, unsafeBuckets, bucketLocker, swapper );

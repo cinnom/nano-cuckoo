@@ -30,6 +30,6 @@ public class FixedHasherTest {
 
 		final int testValue = 127;
 
-		Assert.assertEquals( testValue * 0xC4CEB9FE1A85EC53L, fixedHasher.getHash( testValue ));
+		Assert.assertEquals( testValue * 0xC4CEB9FE1A85EC53L, fixedHasher.getHash( testValue ) );
 	}
 }

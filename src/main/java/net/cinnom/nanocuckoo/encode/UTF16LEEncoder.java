@@ -15,14 +15,13 @@
  */
 package net.cinnom.nanocuckoo.encode;
 
-import java.io.Serializable;
-
 /**
- * StringEncoder for encoding UTF-16 Little Endian Strings.
+ * StringEncoder for encoding UTF-16 Little Endian Strings. This encoder should work for any String.
+ * <p>
+ * Performance on this encoder is good for general purpose usage.
+ * </p>
  */
-public class UTF16LEEncoder implements StringEncoder, Serializable {
-
-	private static final long serialVersionUID = 1L;
+public class UTF16LEEncoder implements StringEncoder {
 
 	/**
 	 * Encode a String into UTF-16 Little Endian bytes.
@@ -35,7 +34,7 @@ public class UTF16LEEncoder implements StringEncoder, Serializable {
 	public byte[] encode( final String data ) {
 
 		final int length = data.length();
-		final byte resultBytes[] = new byte[length * 2];
+		final byte resultBytes[] = new byte[length << 1];
 
 		for ( int j = 0; j < length; j++ ) {
 
@@ -49,5 +48,4 @@ public class UTF16LEEncoder implements StringEncoder, Serializable {
 
 		return resultBytes;
 	}
-
 }

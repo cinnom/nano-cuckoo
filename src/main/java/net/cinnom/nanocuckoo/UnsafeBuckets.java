@@ -17,11 +17,7 @@ package net.cinnom.nanocuckoo;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 
 import sun.misc.Unsafe;
@@ -29,9 +25,7 @@ import sun.misc.Unsafe;
 /**
  * Internal bucket implementation that uses sun.misc.Unsafe for native memory allocation.
  */
-abstract class UnsafeBuckets implements Serializable {
-
-	private static final long serialVersionUID = 1L;
+abstract class UnsafeBuckets {
 
 	private static final int BITS_PER_LONG = 64;
 
@@ -41,22 +35,22 @@ abstract class UnsafeBuckets implements Serializable {
 	private static final long MIN_CAPACITY = 0x0000000000000008L;
 
 	private final long capacity;
-	private final long capacityBytes;
 	private final boolean countingDisabled;
 	private int entries;
-	private int entryMask;
-
-	private final int bucketBits;
-
-	private final AtomicLong insertedCount = new AtomicLong();
-
-	transient Unsafe unsafe;
-	transient long[] addresses;
 	int fpBits;
 
-	UnsafeBuckets( int entries, long bucketCount, int fpBits, boolean countingDisabled ) {
+	private int entryMask;
+	private final long capacityBytes;
+	private final int bucketBits;
 
-		unsafe = getUnsafe();
+	private final AtomicLong insertedCount;
+
+	Unsafe unsafe;
+	long[] addresses;
+
+	UnsafeBuckets( int entries, long bucketCount, int fpBits, boolean countingDisabled, long initialCount ) {
+
+		unsafe = new UnsafeProvider().getUnsafe();
 
 		long realCapacity = Math.max( Math.min( Long.highestOneBit( bucketCount ), MAX_CAPACITY ), MIN_CAPACITY );
 
@@ -64,19 +58,33 @@ abstract class UnsafeBuckets implements Serializable {
 			realCapacity <<= 1;
 		}
 
-		bucketBits = BITS_PER_LONG - Long.bitCount( realCapacity - 1 );
-
 		this.entries = entries;
-		entryMask = this.entries - 1;
-
-		long capacityBytes = ( realCapacity >>> DIV_8 ) * fpBits;
-
 		this.capacity = realCapacity;
-		this.capacityBytes = capacityBytes;
 		this.fpBits = fpBits;
 		this.countingDisabled = countingDisabled;
+		this.insertedCount = new AtomicLong( initialCount );
+
+		this.entryMask = this.entries - 1;
+		this.capacityBytes = ( capacity >>> DIV_8 ) * fpBits;
+		this.bucketBits = BITS_PER_LONG - Long.bitCount( capacity - 1 );
 
 		allocateMemory();
+	}
+
+	static UnsafeBuckets createBuckets( final int fpBits, final int entriesPerBucket, final long bucketCount,
+			final boolean countingDisabled, final long initialCount ) {
+
+		switch ( fpBits ) {
+			case ByteUnsafeBuckets.FP_BITS:
+				return new ByteUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled, initialCount );
+			case ShortUnsafeBuckets.FP_BITS:
+				return new ShortUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled, initialCount );
+			case IntUnsafeBuckets.FP_BITS:
+				return new IntUnsafeBuckets( entriesPerBucket, bucketCount, countingDisabled, initialCount );
+			default:
+				return new VariableUnsafeBuckets( entriesPerBucket, bucketCount, fpBits, countingDisabled,
+						initialCount );
+		}
 	}
 
 	int getEntryMask() {
@@ -107,6 +115,26 @@ abstract class UnsafeBuckets implements Serializable {
 	void decrementInsertedCount() {
 
 		insertedCount.decrementAndGet();
+	}
+
+	long getBucketCount() {
+
+		return capacity;
+	}
+
+	int getEntriesPerBucket() {
+
+		return entries;
+	}
+
+	long getTotalCapacity() {
+
+		return capacity * entries;
+	}
+
+	boolean isCountingDisabled() {
+
+		return countingDisabled;
 	}
 
 	void expand() {
@@ -202,16 +230,6 @@ abstract class UnsafeBuckets implements Serializable {
 		return retVal;
 	}
 
-	long getBucketCount() {
-
-		return capacity;
-	}
-
-	long getCapacity() {
-
-		return capacity * entries;
-	}
-
 	void close() {
 
 		for ( int i = 0; i < entries; i++ ) {
@@ -226,7 +244,7 @@ abstract class UnsafeBuckets implements Serializable {
 
 	abstract void putValue( int entry, long bucket, int value );
 
-	private void writeMemory( OutputStream outputStream ) throws IOException {
+	void writeMemory( OutputStream outputStream ) throws IOException {
 
 		for ( int entry = 0; entry < entries; entry++ ) {
 			for ( long memoryByte = 0; memoryByte < capacityBytes; memoryByte++ ) {
@@ -236,7 +254,7 @@ abstract class UnsafeBuckets implements Serializable {
 		}
 	}
 
-	private void readMemory( InputStream inputStream ) throws IOException {
+	void readMemory( InputStream inputStream ) throws IOException {
 
 		for ( int entry = 0; entry < entries; entry++ ) {
 			for ( long memoryByte = 0; memoryByte < capacityBytes; memoryByte++ ) {
@@ -246,67 +264,12 @@ abstract class UnsafeBuckets implements Serializable {
 		}
 	}
 
-	private void writeObject( ObjectOutputStream out ) throws IOException {
-
-		out.writeLong( capacity );
-		out.writeLong( capacityBytes );
-		out.writeBoolean( countingDisabled );
-		out.writeInt( entries );
-		out.writeInt( entryMask );
-		out.writeInt( bucketBits );
-		out.writeLong( insertedCount.get() );
-		out.writeInt( fpBits );
-		writeMemory( out );
-		out.flush();
-	}
-
-	private void readObject( ObjectInputStream in ) throws IOException, ClassNotFoundException {
-
-		try {
-			unsafe = getUnsafe();
-
-			long capacityOffset = unsafe.objectFieldOffset( UnsafeBuckets.class.getDeclaredField( "capacity" ) );
-			long capacityBytesOffset = unsafe
-					.objectFieldOffset( UnsafeBuckets.class.getDeclaredField( "capacityBytes" ) );
-			long countingDisabledOffset = unsafe
-					.objectFieldOffset( UnsafeBuckets.class.getDeclaredField( "countingDisabled" ) );
-			long bucketBitsOffset = unsafe.objectFieldOffset( UnsafeBuckets.class.getDeclaredField( "bucketBits" ) );
-			long insertedCountOffset = unsafe
-					.objectFieldOffset( UnsafeBuckets.class.getDeclaredField( "insertedCount" ) );
-
-			// We need Unsafe anyways, may as well abuse it to write to final variables
-			unsafe.putLong( this, capacityOffset, in.readLong() );
-			unsafe.putLong( this, capacityBytesOffset, in.readLong() );
-			unsafe.putBoolean( this, countingDisabledOffset, in.readBoolean() );
-			entries = in.readInt();
-			entryMask = in.readInt();
-			unsafe.putInt( this, bucketBitsOffset, in.readInt() );
-			unsafe.putObject( this, insertedCountOffset, new AtomicLong( in.readLong() ) );
-			fpBits = in.readInt();
-			allocateMemory();
-			readMemory( in );
-		} catch ( NoSuchFieldException e ) {
-			throw new RuntimeException( "Couldn't locate field during deserialization", e );
-		}
-	}
-
 	private void allocateMemory() {
 
 		addresses = new long[this.entries];
 		for ( int i = 0; i < this.entries; i++ ) {
 			addresses[i] = unsafe.allocateMemory( capacityBytes );
 			unsafe.setMemory( addresses[i], capacityBytes, (byte) 0 );
-		}
-	}
-
-	private Unsafe getUnsafe() {
-
-		try {
-			Field singleoneInstanceField = Unsafe.class.getDeclaredField( "theUnsafe" );
-			singleoneInstanceField.setAccessible( true );
-			return (Unsafe) singleoneInstanceField.get( null );
-		} catch ( IllegalAccessException | NoSuchFieldException e ) {
-			throw new RuntimeException( "Failed to obtain Unsafe", e );
 		}
 	}
 }

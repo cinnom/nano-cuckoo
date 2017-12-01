@@ -15,10 +15,10 @@
  */
 package net.cinnom.nanocuckoo.encode;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * UTF8Encoder tests
@@ -32,7 +32,8 @@ public class UTF8EncoderTest {
 
 		final String testStr = "ve09jw@$%THafw09\uD83D\uDD8F";
 
-		final byte[] values = testStr.getBytes( StandardCharsets.UTF_8 );;
+		final byte[] values = testStr.getBytes( StandardCharsets.UTF_8 );
+		;
 
 		int i = 0;
 		for ( byte oneByte : utf8Encoder.encode( testStr ) ) {

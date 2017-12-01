@@ -31,7 +31,7 @@ public class KickedValuesTest {
 		int kickedFingerprint = 1342645;
 
 		kickedValues.setKickedFingerprint( kickedFingerprint );
-		Assert.assertEquals( kickedFingerprint, kickedValues.getKickedFingerprint());
+		Assert.assertEquals( kickedFingerprint, kickedValues.getKickedFingerprint() );
 	}
 
 	@Test
@@ -42,7 +42,7 @@ public class KickedValuesTest {
 		int kickedFingerprint = 1342645;
 
 		Assert.assertTrue( kickedValues.compareAndSetKickedFingerprint( kickedFingerprint ) );
-		Assert.assertEquals( kickedFingerprint, kickedValues.getKickedFingerprint());
+		Assert.assertEquals( kickedFingerprint, kickedValues.getKickedFingerprint() );
 	}
 
 	@Test
@@ -56,7 +56,7 @@ public class KickedValuesTest {
 		kickedValues.setKickedFingerprint( kickedFingerprint );
 
 		Assert.assertFalse( kickedValues.compareAndSetKickedFingerprint( kickedFingerprint2 ) );
-		Assert.assertEquals( kickedFingerprint, kickedValues.getKickedFingerprint());
+		Assert.assertEquals( kickedFingerprint, kickedValues.getKickedFingerprint() );
 	}
 
 	@Test
@@ -67,7 +67,7 @@ public class KickedValuesTest {
 		long kickedBucket = 134264513423L;
 
 		kickedValues.setKickedBucket( kickedBucket );
-		Assert.assertEquals( kickedBucket, kickedValues.getKickedBucket());
+		Assert.assertEquals( kickedBucket, kickedValues.getKickedBucket() );
 	}
 
 	@Test
@@ -82,7 +82,7 @@ public class KickedValuesTest {
 		kickedValues.setKickedFingerprint( kickedFingerprint );
 		kickedValues.setKickedBucket( kickedBucket );
 
-		Assert.assertTrue( kickedValues.equals( kickedFingerprint, kickedBucket, kickedBucket2 ));
+		Assert.assertTrue( kickedValues.equals( kickedFingerprint, kickedBucket, kickedBucket2 ) );
 	}
 
 	@Test
@@ -97,7 +97,7 @@ public class KickedValuesTest {
 		kickedValues.setKickedFingerprint( kickedFingerprint );
 		kickedValues.setKickedBucket( kickedBucket2 );
 
-		Assert.assertTrue( kickedValues.equals( kickedFingerprint, kickedBucket, kickedBucket2 ));
+		Assert.assertTrue( kickedValues.equals( kickedFingerprint, kickedBucket, kickedBucket2 ) );
 	}
 
 	@Test
@@ -112,7 +112,7 @@ public class KickedValuesTest {
 		kickedValues.setKickedFingerprint( kickedFingerprint );
 		kickedValues.setKickedBucket( kickedBucket );
 
-		Assert.assertFalse( kickedValues.equals( 75642, kickedBucket, kickedBucket2 ));
+		Assert.assertFalse( kickedValues.equals( 75642, kickedBucket, kickedBucket2 ) );
 	}
 
 	@Test
@@ -127,7 +127,7 @@ public class KickedValuesTest {
 		kickedValues.setKickedFingerprint( kickedFingerprint );
 		kickedValues.setKickedBucket( kickedBucket );
 
-		Assert.assertFalse( kickedValues.equals( kickedFingerprint, 5463434, 567334 ));
+		Assert.assertFalse( kickedValues.equals( kickedFingerprint, 5463434, 567334 ) );
 	}
 
 	@Test
@@ -167,7 +167,7 @@ public class KickedValuesTest {
 
 		try {
 			kickedValues.unlock();
-			Assert.assertTrue( false );
+			Assert.fail();
 		} catch ( IllegalMonitorStateException e ) {
 
 		}

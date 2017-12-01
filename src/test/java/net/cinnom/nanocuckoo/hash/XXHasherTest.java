@@ -15,6 +15,7 @@
  */
 package net.cinnom.nanocuckoo.hash;
 
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,16 +27,15 @@ public class XXHasherTest {
 	@Test
 	public void getHashTest() {
 
-		final int seed = 0x48F7E28A;
-
-		final XXHasher xxHasher = new XXHasher( seed );
+		final XXHasher xxHasher = new XXHasher( NanoCuckooFilter.Builder.DEFAULT_SEED );
 
 		final byte[] values = new byte[1000];
-		for(int i = 0; i < 1000; i++) {
+		for ( int i = 0; i < 1000; i++ ) {
 			values[i] = (byte) i;
 		}
 
-		Assert.assertEquals( -4073436676363075178L, xxHasher.getHash( values ));
+		Assert.assertEquals( NanoCuckooFilter.Builder.DEFAULT_SEED, xxHasher.getSeed() );
+		Assert.assertEquals( -4073436676363075178L, xxHasher.getHash( values ) );
 	}
 
 	@Test
@@ -46,10 +46,11 @@ public class XXHasherTest {
 		final XXHasher xxHasher = new XXHasher( seed );
 
 		final byte[] values = new byte[1000];
-		for(int i = 0; i < 1000; i++) {
+		for ( int i = 0; i < 1000; i++ ) {
 			values[i] = (byte) i;
 		}
 
-		Assert.assertEquals( -6925839588689899575L, xxHasher.getHash( values ));
+		Assert.assertEquals( seed, xxHasher.getSeed() );
+		Assert.assertEquals( -6925839588689899575L, xxHasher.getHash( values ) );
 	}
 }

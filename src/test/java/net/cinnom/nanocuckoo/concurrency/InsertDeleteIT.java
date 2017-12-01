@@ -15,15 +15,15 @@
  */
 package net.cinnom.nanocuckoo.concurrency;
 
-import net.cinnom.nanocuckoo.ConcurrentSwapSafety;
-import net.cinnom.nanocuckoo.NanoCuckooFilter;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import net.cinnom.nanocuckoo.NanoCuckooFilter;
 
 /**
  * Insert/Delete concurrency test.
@@ -38,7 +38,7 @@ public class InsertDeleteIT {
 		final String containedString = "abcdefghijklmn-opqrstuvwxyz-000000";
 
 		final NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( capacity ).withCountingEnabled( true )
-				.withConcurrentSwapSafety( ConcurrentSwapSafety.RELIABLE ).withFingerprintBits( 7 ).build();
+				.withFingerprintBits( 7 ).build();
 
 		final AtomicInteger currentRun = new AtomicInteger();
 
@@ -65,7 +65,7 @@ public class InsertDeleteIT {
 					if ( i > 100_000 && i % 2 > 0 ) {
 						String c = ( i / 2 ) + containedString;
 						if ( !cuckooFilter.delete( c ) ) {
-							System.out.println( "Delete failed at: " + (i / 2) );
+							System.out.println( "Delete failed at: " + ( i / 2 ) );
 							failed.set( true );
 							break;
 						}

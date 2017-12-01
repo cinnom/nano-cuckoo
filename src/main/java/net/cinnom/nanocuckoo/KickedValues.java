@@ -15,16 +15,13 @@
  */
 package net.cinnom.nanocuckoo;
 
-import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Kicked value tracker. New inserts can't occur if this is populated. Provides locking for inserts/deletes.
  */
-class KickedValues implements Serializable {
-
-	private static final long serialVersionUID = 1L;
+class KickedValues {
 
 	private final ReentrantLock lock = new ReentrantLock();
 	private final AtomicInteger kickedFingerprint = new AtomicInteger( -1 );

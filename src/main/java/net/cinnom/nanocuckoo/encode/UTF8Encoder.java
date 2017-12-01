@@ -15,15 +15,16 @@
  */
 package net.cinnom.nanocuckoo.encode;
 
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
 /**
- * StringEncoder for encoding UTF-8 Strings.
+ * StringEncoder for encoding UTF-8 Strings. This encoder should work for any String.
+ * <p>
+ * Performance on this encoder is generally worse than any other encoders; {@link UTF16LEEncoder} should be used
+ * instead.
+ * </p>
  */
-public class UTF8Encoder implements StringEncoder, Serializable {
-
-	private static final long serialVersionUID = 1L;
+public class UTF8Encoder implements StringEncoder {
 
 	/**
 	 * Encode a String into UTF-8 bytes.
@@ -37,5 +38,4 @@ public class UTF8Encoder implements StringEncoder, Serializable {
 
 		return data.getBytes( StandardCharsets.UTF_8 );
 	}
-
 }

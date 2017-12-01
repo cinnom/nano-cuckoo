@@ -15,14 +15,13 @@
  */
 package net.cinnom.nanocuckoo.encode;
 
-import java.io.Serializable;
-
 /**
- * StringEncoder for encoding ASCII Strings.
+ * StringEncoder for encoding ASCII Strings. This encoder will only work with Strings containing ASCII characters.
+ * <p>
+ * Performance on this encoder is similar to {@link UTF16LEEncoder} for ASCII data.
+ * </p>
  */
-public class ASCIIEncoder implements StringEncoder, Serializable {
-
-	private static final long serialVersionUID = 1L;
+public class ASCIIEncoder implements StringEncoder {
 
 	/**
 	 * Encode a String into ASCII bytes.

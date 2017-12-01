@@ -30,14 +30,14 @@ public class ShortUnsafeBucketsTest {
 		final long buckets = 32;
 		final boolean counting = false;
 
-		final ShortUnsafeBuckets shortUnsafeBuckets = new ShortUnsafeBuckets( entries, buckets, counting );
+		final ShortUnsafeBuckets shortUnsafeBuckets = new ShortUnsafeBuckets( entries, buckets, counting, 0 );
 
-		for(int e = 0; e < entries; e++) {
-			for(int b = 0; b < buckets; b++) {
+		for ( int e = 0; e < entries; e++ ) {
+			for ( int b = 0; b < buckets; b++ ) {
 
-				int value = (23 + e * b);
+				int value = ( 23 + e * b );
 				shortUnsafeBuckets.putValue( e, b, value );
-				Assert.assertEquals(value, shortUnsafeBuckets.getValue( e, b ));
+				Assert.assertEquals( value, shortUnsafeBuckets.getValue( e, b ) );
 			}
 		}
 
