@@ -1,4 +1,4 @@
-package net.cinnom.nanocuckoo.concurrency;
+package net.cinnom.nanocuckoo.performance;
 
 import org.junit.Test;
 
