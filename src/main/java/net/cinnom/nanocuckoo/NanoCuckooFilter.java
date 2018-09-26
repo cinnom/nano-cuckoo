@@ -21,6 +21,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.lang.ref.Cleaner;
 
 import net.cinnom.nanocuckoo.encode.StringEncoder;
 import net.cinnom.nanocuckoo.encode.UTF16LEEncoder;
@@ -30,7 +31,6 @@ import net.cinnom.nanocuckoo.hash.FixedHasher;
 import net.cinnom.nanocuckoo.hash.XXHasher;
 import net.cinnom.nanocuckoo.random.RandomInt;
 import net.cinnom.nanocuckoo.random.WrappedThreadLocalRandom;
-import sun.misc.Cleaner;
 
 /**
  * <p>
@@ -63,6 +63,7 @@ public class NanoCuckooFilter implements Serializable {
 	private transient Swapper swapper;
 
 	private transient Cleaner cleaner;
+	private transient Cleaner.Cleanable cleanable;
 
 	NanoCuckooFilter( int fpBits, BucketHasher bucketHasher, FingerprintHasher fpHasher, StringEncoder stringEncoder,
 			final KickedValues kickedValues, final UnsafeBuckets buckets, final BucketLocker bucketLocker,
@@ -88,7 +89,8 @@ public class NanoCuckooFilter implements Serializable {
 		// Set the mask that will pull fingerprint bits from the bucket hash
 		fpMask = -1 >>> ( BITS_PER_INT - fpBits );
 
-		cleaner = Cleaner.create( this, new Deallocator( buckets ) );
+		cleaner = Cleaner.create();
+		cleanable = cleaner.register( this, new Deallocator( buckets ) );
 	}
 
 	/**
@@ -426,7 +428,7 @@ public class NanoCuckooFilter implements Serializable {
 	 */
 	public void close() {
 
-		cleaner.clean();
+		cleanable.clean();
 	}
 
 	private int fingerprintFromLong( long hash ) {

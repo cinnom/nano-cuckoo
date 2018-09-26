@@ -32,8 +32,6 @@ public class UnsafeEncoder implements StringEncoder {
 
 	private Unsafe unsafe;
 	private long stringValueFieldOffset;
-	private long charArrayOffset;
-	private long byteArrayOffset;
 
 	/**
 	 * Instantiate an UnsafeEncoder. Will try to get an {@link Unsafe} as well as field offsets, and will throw a
@@ -49,8 +47,6 @@ public class UnsafeEncoder implements StringEncoder {
 		try {
 			unsafe = new UnsafeProvider().getUnsafe();
 			stringValueFieldOffset = unsafe.objectFieldOffset( getStringValueField() );
-			charArrayOffset = unsafe.arrayBaseOffset( char[].class );
-			byteArrayOffset = unsafe.arrayBaseOffset( byte[].class );
 		} catch ( NoSuchFieldException ex ) {
 			throw new RuntimeException( "Failed to get field offsets", ex );
 		}
@@ -71,10 +67,6 @@ public class UnsafeEncoder implements StringEncoder {
 	@Override
 	public byte[] encode( final String data ) {
 
-		final char[] src = (char[]) unsafe.getObject( data, stringValueFieldOffset );
-		final byte[] out = new byte[src.length << 1];
-
-		unsafe.copyMemory( src, charArrayOffset, out, byteArrayOffset, out.length );
-		return out;
+		return (byte[]) unsafe.getObject( data, stringValueFieldOffset );
 	}
 }
