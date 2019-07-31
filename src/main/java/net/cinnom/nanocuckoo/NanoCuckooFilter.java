@@ -41,7 +41,7 @@ import sun.misc.Cleaner;
  */
 public class NanoCuckooFilter implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 2L;
 
 	private static final int BITS_PER_BYTE = 8;
 	private static final int BITS_PER_SHORT = 16;
