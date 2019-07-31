@@ -102,4 +102,10 @@ class ReliableSwapper implements Swapper, Serializable {
 		in.defaultReadObject();
 		random = new SplittableRandom( randomSeed );
 	}
+
+	@Override
+	public int getMaxKicks() {
+
+		return maxKicks;
+	}
 }

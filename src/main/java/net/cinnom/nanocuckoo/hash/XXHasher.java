@@ -60,4 +60,10 @@ public class XXHasher implements BucketHasher, Serializable {
 		in.defaultReadObject();
 		factory = XXHashFactory.fastestInstance();
 	}
+
+	@Override
+	public int getSeed() {
+
+		return seed;
+	}
 }

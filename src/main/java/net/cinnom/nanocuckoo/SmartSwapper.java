@@ -50,4 +50,10 @@ class SmartSwapper implements Swapper, Serializable {
 
 		return fastSwapper.swap( fingerprint, bucket );
 	}
+
+	@Override
+	public int getMaxKicks() {
+
+		return fastSwapper.getMaxKicks();
+	}
 }

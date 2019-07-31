@@ -109,6 +109,21 @@ abstract class UnsafeBuckets implements Serializable {
 		insertedCount.decrementAndGet();
 	}
 
+	long getBucketCount() {
+
+		return capacity;
+	}
+
+	int getEntriesPerBucket() {
+
+		return entries;
+	}
+
+	boolean isCountingDisabled() {
+
+		return countingDisabled;
+	}
+
 	void expand() {
 
 		entries *= 2;
@@ -202,11 +217,6 @@ abstract class UnsafeBuckets implements Serializable {
 		return retVal;
 	}
 
-	long getBucketCount() {
-
-		return capacity;
-	}
-
 	long getCapacity() {
 
 		return capacity * entries;
@@ -226,7 +236,7 @@ abstract class UnsafeBuckets implements Serializable {
 
 	abstract void putValue( int entry, long bucket, int value );
 
-	private void writeMemory( OutputStream outputStream ) throws IOException {
+	void writeMemory( OutputStream outputStream ) throws IOException {
 
 		for ( int entry = 0; entry < entries; entry++ ) {
 			for ( long memoryByte = 0; memoryByte < capacityBytes; memoryByte++ ) {

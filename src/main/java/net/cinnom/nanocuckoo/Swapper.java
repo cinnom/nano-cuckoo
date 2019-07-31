@@ -23,4 +23,5 @@ interface Swapper {
 
 	boolean swap( int fingerprint, long bucket );
 
+	int getMaxKicks();
 }

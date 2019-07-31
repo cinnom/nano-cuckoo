@@ -66,4 +66,9 @@ class BucketLocker implements Serializable {
 			bucketLock.unlock();
 		}
 	}
+
+	int getConcurrency() {
+
+		return concurrencyBucketMask + 1;
+	}
 }

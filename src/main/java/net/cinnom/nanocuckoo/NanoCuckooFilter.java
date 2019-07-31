@@ -497,6 +497,52 @@ public class NanoCuckooFilter implements Serializable {
 		bucketLocker.unlockAllBuckets();
 	}
 
+	public void writeV2Object( ObjectOutputStream out ) throws IOException {
+
+		bucketLocker.lockAllBuckets();
+
+		final Serialization serialization = new Serialization();
+
+		// Write bucket values
+		out.writeInt( fpBits );
+		out.writeInt( buckets.getEntriesPerBucket() );
+		out.writeLong( buckets.getBucketCount() );
+		out.writeBoolean( buckets.isCountingDisabled() );
+		out.writeLong( buckets.getInsertedCount() );
+		buckets.writeMemory( out );
+
+		// Write kicked values
+		out.writeInt( kickedValues.getKickedFingerprint() );
+		out.writeLong( kickedValues.getKickedBucket() );
+
+		// Write bucket locker values
+		out.writeInt( bucketLocker.getConcurrency() );
+
+		// Write swapper values
+		out.writeInt( swapper.getMaxKicks() );
+		// Write random int provider
+		final byte randomIntType = serialization.getRandomIntType();
+		out.writeByte( randomIntType );
+
+		// Write string encoder
+		final byte stringEncoderType = serialization.getStringEncoderType( stringEncoder );
+		out.writeByte( stringEncoderType );
+
+		// Write bucket hasher
+		final byte bucketHasherType = serialization.getBucketHasherType( bucketHasher );
+		out.writeByte( bucketHasherType );
+		out.writeInt( bucketHasher.getSeed() );
+
+		// Write fingerprint hasher
+		final byte fpHasherType = serialization.getFingerprintHasherType( fpHasher );
+		out.writeByte( fpHasherType );
+		if ( serialization.isCustomType( fpHasherType ) ) {
+			out.writeObject( fpHasher );
+		}
+
+		bucketLocker.unlockAllBuckets();
+	}
+
 	/**
 	 * Closes UnsafeBuckets.
 	 */
