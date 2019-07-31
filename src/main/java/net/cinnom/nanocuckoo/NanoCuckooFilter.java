@@ -48,18 +48,18 @@ public class NanoCuckooFilter implements Serializable {
 	private static final int BITS_PER_INT = 32;
 	private static final int BITS_PER_LONG = 64;
 
-	private final UnsafeBuckets buckets;
-	private final StringEncoder stringEncoder;
-	private final BucketHasher bucketHasher;
-	private final FingerprintHasher fpHasher;
+	private final transient UnsafeBuckets buckets;
+	private final transient StringEncoder stringEncoder;
+	private final transient BucketHasher bucketHasher;
+	private final transient FingerprintHasher fpHasher;
 
 	private final int fpBits;
-	private final int fpPerLong;
-	private final int fpMask;
+	private final transient int fpPerLong;
+	private final transient int fpMask;
 
-	private final KickedValues kickedValues;
-	private final BucketLocker bucketLocker;
-	private final Swapper swapper;
+	private final transient KickedValues kickedValues;
+	private final transient BucketLocker bucketLocker;
+	private final transient Swapper swapper;
 
 	private transient Cleaner cleaner;
 
@@ -491,13 +491,6 @@ public class NanoCuckooFilter implements Serializable {
 	}
 
 	private void writeObject( ObjectOutputStream out ) throws IOException {
-
-		bucketLocker.lockAllBuckets();
-		out.defaultWriteObject();
-		bucketLocker.unlockAllBuckets();
-	}
-
-	public void writeV2Object( ObjectOutputStream out ) throws IOException {
 
 		bucketLocker.lockAllBuckets();
 
