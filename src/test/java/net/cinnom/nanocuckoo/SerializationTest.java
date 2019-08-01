@@ -75,6 +75,7 @@ public class SerializationTest {
 		ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
 		ObjectOutputStream objectOutputStream = new ObjectOutputStream( byteOutputStream );
 		objectOutputStream.writeObject( cuckooFilter );
+		objectOutputStream.close();
 		byte[] serializedBytes = byteOutputStream.toByteArray();
 
 		System.out.println( "Serialized filter size: " + serializedBytes.length );
@@ -86,6 +87,7 @@ public class SerializationTest {
 		ByteArrayInputStream byteInputStream = new ByteArrayInputStream( serializedBytes );
 		ObjectInputStream objectInputStream = new ObjectInputStream( byteInputStream );
 		cuckooFilter = (NanoCuckooFilter) objectInputStream.readObject();
+		objectInputStream.close();
 
 		boolean isValueInFilter = cuckooFilter.contains( testValue ); // Returns true
 
@@ -96,7 +98,7 @@ public class SerializationTest {
 	}
 
 	@Test
-	public void dumpMemoryTest() throws IOException, ClassNotFoundException {
+	public void dumpMemoryTest() throws IOException {
 
 		// Create a filter
 		NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( 32 ).build();
@@ -109,6 +111,7 @@ public class SerializationTest {
 		// Dump filter internal memory
 		ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
 		cuckooFilter.writeMemory( byteOutputStream );
+		byteOutputStream.close();
 		byte[] serializedBytes = byteOutputStream.toByteArray();
 
 		System.out.println( "Filter memory size: " + serializedBytes.length );
@@ -121,6 +124,7 @@ public class SerializationTest {
 		// Read the dumped memory in from the byte array
 		ByteArrayInputStream byteInputStream = new ByteArrayInputStream( serializedBytes );
 		cuckooFilter.readMemory( byteInputStream );
+		byteInputStream.close();
 
 		boolean isValueInFilter = cuckooFilter.contains( testValue ); // Returns true
 
@@ -147,8 +151,9 @@ public class SerializationTest {
 		ObjectOutputStream objectOutputStream = new ObjectOutputStream( byteOutputStream );
 		objectOutputStream.writeObject( cuckooFilter );
 		byte[] serializedBytes = byteOutputStream.toByteArray();
+		objectOutputStream.close();
 
-		System.out.println( "Serialized filter size: " + serializedBytes.length );
+		System.out.println( "Custom serialized filter size: " + serializedBytes.length );
 
 		// Close the current filter before replacing it
 		cuckooFilter.close();
@@ -157,6 +162,44 @@ public class SerializationTest {
 		ByteArrayInputStream byteInputStream = new ByteArrayInputStream( serializedBytes );
 		ObjectInputStream objectInputStream = new ObjectInputStream( byteInputStream );
 		cuckooFilter = (NanoCuckooFilter) objectInputStream.readObject();
+		objectInputStream.close();
+
+		boolean isValueInFilter = cuckooFilter.contains( testValue ); // Returns true
+
+		Assert.assertTrue( isValueInFilter );
+
+		// Close the filter
+		cuckooFilter.close();
+	}
+
+	@Test
+	public void saveLoadTest() throws IOException, ClassNotFoundException {
+
+		// Create a filter
+		NanoCuckooFilter cuckooFilter = new NanoCuckooFilter.Builder( 32 ).build();
+
+		String testValue = "test value";
+
+		// Insert a value into the filter
+		cuckooFilter.insert( testValue );
+
+		// Serialize the filter to a byte array
+		ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
+		ObjectOutputStream objectOutputStream = new ObjectOutputStream( byteOutputStream );
+		cuckooFilter.saveFilter( objectOutputStream );
+		objectOutputStream.close();
+		byte[] serializedBytes = byteOutputStream.toByteArray();
+
+		System.out.println( "Saved filter size: " + serializedBytes.length );
+
+		// Close the current filter before replacing it
+		cuckooFilter.close();
+
+		// Read the serialized filter in from the byte array
+		ByteArrayInputStream byteInputStream = new ByteArrayInputStream( serializedBytes );
+		ObjectInputStream objectInputStream = new ObjectInputStream( byteInputStream );
+		cuckooFilter = NanoCuckooFilter.loadFilter( objectInputStream );
+		objectInputStream.close();
 
 		boolean isValueInFilter = cuckooFilter.contains( testValue ); // Returns true
 

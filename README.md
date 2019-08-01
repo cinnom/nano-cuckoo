@@ -20,7 +20,7 @@ Maven
 <dependency>
     <groupId>net.cinnom</groupId>
     <artifactId>nano-cuckoo</artifactId>
-    <version>3.0.1</version>
+    <version>3.0.2</version>
 </dependency>
 ```
 
