@@ -15,12 +15,6 @@
  */
 package net.cinnom.nanocuckoo;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.util.SplittableRandom;
-
 import net.cinnom.nanocuckoo.encode.StringEncoder;
 import net.cinnom.nanocuckoo.encode.UTF8Encoder;
 import net.cinnom.nanocuckoo.hash.BucketHasher;
@@ -28,6 +22,12 @@ import net.cinnom.nanocuckoo.hash.FingerprintHasher;
 import net.cinnom.nanocuckoo.hash.FixedHasher;
 import net.cinnom.nanocuckoo.hash.XXHasher;
 import sun.misc.Cleaner;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.SplittableRandom;
 
 /**
  * <p>
@@ -41,25 +41,25 @@ import sun.misc.Cleaner;
  */
 public class NanoCuckooFilter implements Serializable {
 
-	private static final long serialVersionUID = 2L;
+	private static final long serialVersionUID = 1L;
 
 	private static final int BITS_PER_BYTE = 8;
 	private static final int BITS_PER_SHORT = 16;
 	private static final int BITS_PER_INT = 32;
 	private static final int BITS_PER_LONG = 64;
 
-	private final transient UnsafeBuckets buckets;
-	private final transient StringEncoder stringEncoder;
-	private final transient BucketHasher bucketHasher;
-	private final transient FingerprintHasher fpHasher;
+	private final UnsafeBuckets buckets;
+	private final StringEncoder stringEncoder;
+	private final BucketHasher bucketHasher;
+	private final FingerprintHasher fpHasher;
 
 	private final int fpBits;
-	private final transient int fpPerLong;
-	private final transient int fpMask;
+	private final int fpPerLong;
+	private final int fpMask;
 
-	private final transient KickedValues kickedValues;
-	private final transient BucketLocker bucketLocker;
-	private final transient Swapper swapper;
+	private final KickedValues kickedValues;
+	private final BucketLocker bucketLocker;
+	private final Swapper swapper;
 
 	private transient Cleaner cleaner;
 
@@ -88,8 +88,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Insert a String into the filter. Will use the initially set String encoder (UTF8Encoder by default).
 	 *
-	 * @param value
-	 *            String to insert.
+	 * @param value String to insert.
 	 * @return True if value successfully inserted, false if filter is full.
 	 */
 	public boolean insert( String value ) {
@@ -100,8 +99,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Insert a byte array into the filter.
 	 *
-	 * @param data
-	 *            Data to insert.
+	 * @param data Data to insert.
 	 * @return True if value successfully inserted, false if filter is full.
 	 */
 	public boolean insert( byte[] data ) {
@@ -112,8 +110,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Insert a pre-hashed value into the filter.
 	 *
-	 * @param hash
-	 *            Hash to insert.
+	 * @param hash Hash to insert.
 	 * @return True if value successfully inserted, false if filter is full.
 	 */
 	public boolean insert( long hash ) {
@@ -128,8 +125,7 @@ public class NanoCuckooFilter implements Serializable {
 	 * Check if a given String has been inserted into the filter. Will use the initially set String encoder (UTF8Encoder
 	 * by default).
 	 *
-	 * @param value
-	 *            String to check.
+	 * @param value String to check.
 	 * @return True if value is in filter, false if not.
 	 */
 	public boolean contains( String value ) {
@@ -140,8 +136,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Check if a given byte array has been inserted into the filter.
 	 *
-	 * @param data
-	 *            Data to check.
+	 * @param data Data to check.
 	 * @return True if value is in filter, false if not.
 	 */
 	public boolean contains( byte[] data ) {
@@ -152,8 +147,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Check if a given pre-hashed value has been inserted into the filter.
 	 *
-	 * @param hash
-	 *            Hash to check.
+	 * @param hash Hash to check.
 	 * @return True if hash is in filter, false if not.
 	 */
 	public boolean contains( long hash ) {
@@ -175,8 +169,7 @@ public class NanoCuckooFilter implements Serializable {
 	 * Count occurrences of a given String in filter. Will use the initially set String encoder (UTF8Encoder by
 	 * default).
 	 *
-	 * @param value
-	 *            Value to count.
+	 * @param value Value to count.
 	 * @return Number of times value was previously inserted.
 	 */
 	public int count( String value ) {
@@ -187,8 +180,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Count occurrences of given byte data in filter.
 	 *
-	 * @param data
-	 *            Data to count.
+	 * @param data Data to count.
 	 * @return Number of times data was previously inserted.
 	 */
 	public int count( byte[] data ) {
@@ -199,8 +191,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Count occurrences of a given pre-hashed value in filter.
 	 *
-	 * @param hash
-	 *            Hash to count.
+	 * @param hash Hash to count.
 	 * @return Number of times hash was previously inserted.
 	 */
 	public int count( long hash ) {
@@ -222,10 +213,8 @@ public class NanoCuckooFilter implements Serializable {
 	 * Delete a specific number of occurrences of a given String in filter. Will use the initially set String encoder
 	 * (UTF8Encoder by default).
 	 *
-	 * @param value
-	 *            Value to delete.
-	 * @param count
-	 *            Number of occurrences to delete.
+	 * @param value Value to delete.
+	 * @param count Number of occurrences to delete.
 	 * @return Number of times value was deleted.
 	 */
 	public int delete( String value, int count ) {
@@ -236,10 +225,8 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Delete a specific number of occurrences of given byte data in filter.
 	 *
-	 * @param data
-	 *            Data to delete.
-	 * @param count
-	 *            Number of occurrences to delete.
+	 * @param data Data to delete.
+	 * @param count Number of occurrences to delete.
 	 * @return Number of times data was deleted.
 	 */
 	public int delete( byte[] data, int count ) {
@@ -250,10 +237,8 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Delete a specific number of occurrences of a given pre-hashed value in filter.
 	 *
-	 * @param hash
-	 *            Hash to delete.
-	 * @param count
-	 *            Number of occurrences to delete.
+	 * @param hash Hash to delete.
+	 * @param count Number of occurrences to delete.
 	 * @return Number of times hash was deleted.
 	 */
 	public int delete( long hash, int count ) {
@@ -301,8 +286,7 @@ public class NanoCuckooFilter implements Serializable {
 	 * Delete one occurrence of a given String in filter. Will use the initially set String encoder (UTF8Encoder by
 	 * default).
 	 *
-	 * @param value
-	 *            Value to delete.
+	 * @param value Value to delete.
 	 * @return True if value was deleted, false if not.
 	 */
 	public boolean delete( String value ) {
@@ -313,8 +297,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Delete one occurrence of given byte data in filter.
 	 *
-	 * @param data
-	 *            Data to delete.
+	 * @param data Data to delete.
 	 * @return True if data was deleted, false if not.
 	 */
 	public boolean delete( byte[] data ) {
@@ -325,8 +308,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Delete one occurrence of a given pre-hashed value in filter.
 	 *
-	 * @param hash
-	 *            Hash to delete.
+	 * @param hash Hash to delete.
 	 * @return True if hash was deleted, false if not.
 	 */
 	public boolean delete( long hash ) {
@@ -374,7 +356,7 @@ public class NanoCuckooFilter implements Serializable {
 
 	/**
 	 * Get native memory bytes used by filter.
-	 * 
+	 *
 	 * @return Native memory bytes used by filter.
 	 */
 	public long getMemoryUsageBytes() {
@@ -384,7 +366,7 @@ public class NanoCuckooFilter implements Serializable {
 
 	/**
 	 * Get filter maximum capacity.
-	 * 
+	 *
 	 * @return Filter maximum capacity.
 	 */
 	public long getCapacity() {
@@ -394,7 +376,7 @@ public class NanoCuckooFilter implements Serializable {
 
 	/**
 	 * Get filter load factor (inserted count / capacity).
-	 * 
+	 *
 	 * @return Filter load factor.
 	 */
 	public double getLoadFactor() {
@@ -493,6 +475,19 @@ public class NanoCuckooFilter implements Serializable {
 	private void writeObject( ObjectOutputStream out ) throws IOException {
 
 		bucketLocker.lockAllBuckets();
+		out.defaultWriteObject();
+		bucketLocker.unlockAllBuckets();
+	}
+
+	/**
+	 * Save filter data to the given ObjectOutputStream. For compatibility with v2 serialization.
+	 *
+	 * @param out ObjectOutputStream to write filter data to.
+	 * @throws IOException Thrown by ObjectOutputStream.
+	 */
+	public void saveFilter( final ObjectOutputStream out ) throws IOException {
+
+		bucketLocker.lockAllBuckets();
 
 		final Serialization serialization = new Serialization();
 
@@ -520,11 +515,18 @@ public class NanoCuckooFilter implements Serializable {
 		// Write string encoder
 		final byte stringEncoderType = serialization.getStringEncoderType( stringEncoder );
 		out.writeByte( stringEncoderType );
+		if ( serialization.isCustomType( stringEncoderType ) ) {
+			out.writeObject( stringEncoder );
+		}
 
 		// Write bucket hasher
 		final byte bucketHasherType = serialization.getBucketHasherType( bucketHasher );
 		out.writeByte( bucketHasherType );
-		out.writeInt( bucketHasher.getSeed() );
+		if ( serialization.isCustomType( bucketHasherType ) ) {
+			out.writeObject( bucketHasher );
+		} else {
+			out.writeInt( bucketHasher.getSeed() );
+		}
 
 		// Write fingerprint hasher
 		final byte fpHasherType = serialization.getFingerprintHasherType( fpHasher );
@@ -548,8 +550,7 @@ public class NanoCuckooFilter implements Serializable {
 			this.buckets = buckets;
 		}
 
-		@Override
-		public void run() {
+		@Override public void run() {
 
 			buckets.close();
 		}
@@ -581,9 +582,8 @@ public class NanoCuckooFilter implements Serializable {
 		 * <p>
 		 * The number of internal buckets will be (capacity / entries per bucket), scaled up to a power of 2.
 		 * </p>
-		 * 
-		 * @param capacity
-		 *            Desired filter capacity.
+		 *
+		 * @param capacity Desired filter capacity.
 		 */
 		public Builder( long capacity ) {
 
@@ -665,8 +665,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Must be a power of 2. Defaults to 4.
 		 * </p>
 		 *
-		 * @param entriesPerBucket
-		 *            Entries per bucket.
+		 * @param entriesPerBucket Entries per bucket.
 		 * @return Updated Builder
 		 */
 		public Builder withEntriesPerBucket( int entriesPerBucket ) {
@@ -690,8 +689,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Defaults to ConcurrentSwapSafety.RELIABLE.
 		 * </p>
 		 *
-		 * @param concurrentSwapSafety
-		 *            Concurrent swap safety.
+		 * @param concurrentSwapSafety Concurrent swap safety.
 		 * @return Updated Builder
 		 */
 		public Builder withConcurrentSwapSafety( ConcurrentSwapSafety concurrentSwapSafety ) {
@@ -715,8 +713,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Must be between 0 and 1. Defaults to 0.90 (90%).
 		 * </p>
 		 *
-		 * @param smartInsertLoadFactor
-		 *            SMART insert load factor.
+		 * @param smartInsertLoadFactor SMART insert load factor.
 		 * @return Updated Builder
 		 */
 		public Builder withSmartInsertLoadFactor( double smartInsertLoadFactor ) {
@@ -740,8 +737,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Must be from 1 to 32. Defaults to 8.
 		 * </p>
 		 *
-		 * @param fpBits
-		 *            Fingerprint bits.
+		 * @param fpBits Fingerprint bits.
 		 * @return Updated Builder
 		 */
 		public Builder withFingerprintBits( int fpBits ) {
@@ -766,8 +762,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Defaults to 400 (results in around 95% LF).
 		 * </p>
 		 *
-		 * @param maxKicks
-		 *            Max kicks.
+		 * @param maxKicks Max kicks.
 		 * @return Updated Builder
 		 */
 		public Builder withMaxKicks( int maxKicks ) {
@@ -791,8 +786,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Defaults to 0x48F7E28A.
 		 * </p>
 		 *
-		 * @param seed
-		 *            Random seed.
+		 * @param seed Random seed.
 		 * @return Updated Builder
 		 */
 		public Builder withRandomSeed( int seed ) {
@@ -812,8 +806,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Defaults to UTF8Encoder.
 		 * </p>
 		 *
-		 * @param stringEncoder
-		 *            String encoder.
+		 * @param stringEncoder String encoder.
 		 * @return Updated Builder
 		 */
 		public Builder withStringEncoder( StringEncoder stringEncoder ) {
@@ -834,8 +827,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Defaults to 64-bit XXHasher with a seed of 0x48F7E28A.
 		 * </p>
 		 *
-		 * @param bucketHasher
-		 *            Bucket hasher.
+		 * @param bucketHasher Bucket hasher.
 		 * @return Updated Builder
 		 */
 		public Builder withBucketHasher( BucketHasher bucketHasher ) {
@@ -856,8 +848,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Defaults to 64-bit FixedHasher.
 		 * </p>
 		 *
-		 * @param fpHasher
-		 *            Fingerprint hasher.
+		 * @param fpHasher Fingerprint hasher.
 		 * @return Updated Builder
 		 */
 		public Builder withFingerprintHasher( FingerprintHasher fpHasher ) {
@@ -882,8 +873,7 @@ public class NanoCuckooFilter implements Serializable {
 		 * Capped by the number of buckets. Defaults to 64.
 		 * </p>
 		 *
-		 * @param concurrency
-		 *            Concurrency.
+		 * @param concurrency Concurrency.
 		 * @return Updated Builder
 		 */
 		public Builder withConcurrency( int concurrency ) {
@@ -911,9 +901,8 @@ public class NanoCuckooFilter implements Serializable {
 		 * <p>
 		 * Defaults to false.
 		 * </p>
-		 * 
-		 * @param countingEnabled
-		 *            Counting enabled.
+		 *
+		 * @param countingEnabled Counting enabled.
 		 * @return Updated Builder.
 		 */
 		public Builder withCountingEnabled( boolean countingEnabled ) {
