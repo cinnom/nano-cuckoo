@@ -233,7 +233,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Delete a specific number of occurrences of given byte data in filter.
 	 *
-	 * @param data  Data to delete.
+	 * @param data Data to delete.
 	 * @param count Number of occurrences to delete.
 	 * @return Number of times data was deleted.
 	 */
@@ -245,7 +245,7 @@ public class NanoCuckooFilter implements Serializable {
 	/**
 	 * Delete a specific number of occurrences of a given pre-hashed value in filter.
 	 *
-	 * @param hash  Hash to delete.
+	 * @param hash Hash to delete.
 	 * @param count Number of occurrences to delete.
 	 * @return Number of times hash was deleted.
 	 */
@@ -475,21 +475,50 @@ public class NanoCuckooFilter implements Serializable {
 
 	private void readObject( ObjectInputStream in ) throws IOException, ClassNotFoundException {
 
+		loadFilter( in, this );
+	}
+
+	private void writeObject( ObjectOutputStream out ) throws IOException {
+
+		saveFilter( out );
+	}
+
+	/**
+	 * Create a new filter from the given ObjectInputStream. To be used in conjunction with
+	 * {@link NanoCuckooFilter#saveFilter(ObjectOutputStream)}.
+	 *
+	 * @param in ObjectInputStream to read filter data from.
+	 * @return Loaded NanoCuckooFilter.
+	 * @throws IOException Thrown by ObjectInputStream.
+	 * @throws ClassNotFoundException Thrown by ObjectInputStream.
+	 */
+	public static NanoCuckooFilter loadFilter( final ObjectInputStream in ) throws IOException, ClassNotFoundException {
+
+		return loadFilter( in, null );
+	}
+
+	private static NanoCuckooFilter loadFilter( final ObjectInputStream in, final NanoCuckooFilter filter )
+			throws IOException, ClassNotFoundException {
+
 		final Serialization serialization = new Serialization();
 
 		// Create buckets
-		fpBits = in.readInt();
-		buckets = UnsafeBuckets.createBuckets( fpBits, in.readInt(), in.readLong(), in.readBoolean(), in.readLong() );
+		final int fpBits = in.readInt();
+		final int entriesPerBucket = in.readInt();
+		final long bucketCount = in.readLong();
+		final boolean countingDisabled = in.readBoolean();
+		final UnsafeBuckets buckets = UnsafeBuckets
+				.createBuckets( fpBits, entriesPerBucket, bucketCount, countingDisabled, in.readLong() );
 		buckets.readMemory( in );
 
 		// Create kicked values
-		kickedValues = new KickedValues();
+		final KickedValues kickedValues = new KickedValues();
 		kickedValues.setKickedFingerprint( in.readInt() );
 		kickedValues.setKickedBucket( in.readLong() );
 
 		// Create bucket locker
 		final int concurrency = in.readInt();
-		bucketLocker = new BucketLocker( concurrency, concurrency );
+		final BucketLocker bucketLocker = new BucketLocker( concurrency, bucketCount );
 
 		// Create swapper
 		int maxKicks = in.readInt();
@@ -501,10 +530,10 @@ public class NanoCuckooFilter implements Serializable {
 		} else {
 			randomInt = (RandomInt) in.readObject();
 		}
-		swapper = new Swapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, randomInt );
 
 		// Create string encoder
 		final byte stringEncoderType = in.readByte();
+		StringEncoder stringEncoder;
 		if ( stringEncoderType > 0 ) {
 			stringEncoder = serialization.createStringEncoder( stringEncoderType );
 		} else {
@@ -513,6 +542,7 @@ public class NanoCuckooFilter implements Serializable {
 
 		// Create bucket hasher
 		final byte bucketHasherType = in.readByte();
+		BucketHasher bucketHasher;
 		if ( bucketHasherType > 0 ) {
 			bucketHasher = serialization.createBucketHasher( bucketHasherType, in.readInt() );
 		} else {
@@ -521,16 +551,40 @@ public class NanoCuckooFilter implements Serializable {
 
 		// Create fingerprint hasher
 		final byte fpHasherType = in.readByte();
+		FingerprintHasher fpHasher;
 		if ( fpHasherType > 0 ) {
 			fpHasher = serialization.createFingerprintHasher( fpHasherType );
 		} else {
 			fpHasher = (FingerprintHasher) in.readObject();
 		}
 
-		initialize();
+		final Swapper swapper = new Swapper( kickedValues, bucketLocker, buckets, fpHasher, maxKicks, randomInt );
+
+		if ( filter == null ) {
+			return new NanoCuckooFilter( fpBits, bucketHasher, fpHasher, stringEncoder, kickedValues, buckets,
+					bucketLocker, swapper );
+		} else {
+			filter.fpBits = fpBits;
+			filter.buckets = buckets;
+			filter.kickedValues = kickedValues;
+			filter.bucketLocker = bucketLocker;
+			filter.stringEncoder = stringEncoder;
+			filter.bucketHasher = bucketHasher;
+			filter.fpHasher = fpHasher;
+			filter.swapper = swapper;
+			filter.initialize();
+			return filter;
+		}
 	}
 
-	private void writeObject( ObjectOutputStream out ) throws IOException {
+	/**
+	 * Save filter data to the given ObjectOutputStream. To be used in conjunction with
+	 * {@link NanoCuckooFilter#loadFilter(ObjectInputStream)}.
+	 *
+	 * @param out ObjectOutputStream to write filter data to.
+	 * @throws IOException Thrown by ObjectOutputStream.
+	 */
+	public void saveFilter( final ObjectOutputStream out ) throws IOException {
 
 		bucketLocker.lockAllBuckets();
 
@@ -627,8 +681,7 @@ public class NanoCuckooFilter implements Serializable {
 			this.buckets = buckets;
 		}
 
-		@Override
-		public void run() {
+		@Override public void run() {
 
 			buckets.close();
 		}
