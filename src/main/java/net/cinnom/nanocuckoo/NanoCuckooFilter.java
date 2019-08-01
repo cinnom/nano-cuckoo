@@ -550,7 +550,8 @@ public class NanoCuckooFilter implements Serializable {
 			this.buckets = buckets;
 		}
 
-		@Override public void run() {
+		@Override
+		public void run() {
 
 			buckets.close();
 		}
